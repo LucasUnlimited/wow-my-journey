@@ -65,7 +65,7 @@ hooksecurefunc("ChatEdit_InsertLink", InserirLinkNoEditBox)
 hooksecurefunc("HandleModifiedItemClick", InserirLinkNoEditBox)
 
 -- 3. Botão de Adicionar
-local btnAdicionar = CreateFrame("Button", nil, frame, "GameMenuButtonTemplate")
+local btnAdicionar = CreateFrame("Button", nil, frame, "UIPanelButtonTemplate")
 btnAdicionar:SetSize(80, 25)
 btnAdicionar:SetPoint("LEFT", editBox, "RIGHT", 10, 0)
 btnAdicionar:SetText("Adicionar")
@@ -249,6 +249,98 @@ btnAdicionar:SetScript("OnClick", function()
         editBox:ClearFocus()
         AtualizarLista()
     end
+end)
+
+-- ==========================================
+-- 6b. Funcionalidade de Exportação/Importação
+-- ==========================================
+local btnExport = CreateFrame("Button", nil, frame, "UIPanelButtonTemplate")
+btnExport:SetSize(80, 22)
+btnExport:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -15, 10)
+btnExport:SetText("Backup")
+
+local exportFrame = CreateFrame("Frame", "MyJourneyExportFrame", frame, "BasicFrameTemplate")
+exportFrame:SetSize(320, 420)
+exportFrame:SetPoint("CENTER", UIParent, "CENTER")
+exportFrame:SetFrameStrata("DIALOG")
+exportFrame.TitleText:SetText("Exportar / Importar")
+exportFrame:Hide()
+
+local exportDesc = exportFrame:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+exportDesc:SetPoint("TOP", exportFrame, "TOP", 0, -30)
+exportDesc:SetText("Copie o texto com Ctrl+C para exportar,\nou cole (Ctrl+V) um backup e clique Importar.")
+
+local exportScroll = CreateFrame("ScrollFrame", nil, exportFrame, "UIPanelScrollFrameTemplate")
+exportScroll:SetPoint("TOPLEFT", 15, -65)
+exportScroll:SetPoint("BOTTOMRIGHT", -35, 45)
+
+local exportEditBox = CreateFrame("EditBox", nil, exportScroll)
+exportEditBox:SetMultiLine(true)
+exportEditBox:SetFontObject("ChatFontNormal")
+exportEditBox:SetWidth(260)
+exportEditBox:SetAutoFocus(true)
+exportEditBox:SetScript("OnEscapePressed", function(self) self:ClearFocus() exportFrame:Hide() end)
+exportScroll:SetScrollChild(exportEditBox)
+
+-- Lógica de serialização
+local function EncodeData()
+    local str = "MJ_EXPORT:1\n"
+    for _, data in ipairs(MyJourneyTrack) do
+        local textStr = type(data) == "table" and data.text or tostring(data)
+        local authorStr = type(data) == "table" and data.author or currentPlayer
+        
+        local txt = string.gsub(textStr or "", "\n", "<MJ_NL>")
+        txt = string.gsub(txt, "|", "<MJ_PIPE>")
+        local aut = string.gsub(authorStr or currentPlayer, "\n", "<MJ_NL>")
+        str = str .. txt .. "<MJ_SEP>" .. aut .. "\n"
+    end
+    return str
+end
+
+local function DecodeData(str)
+    local lines = {strsplit("\n", str)}
+    if lines[1] ~= "MJ_EXPORT:1" then return false end
+    
+    local newTrack = {}
+    for i = 2, #lines do
+        local line = lines[i]
+        if line and line ~= "" then
+            local sepStart, sepEnd = string.find(line, "<MJ_SEP>")
+            if sepStart then
+                local txt = string.sub(line, 1, sepStart - 1)
+                local aut = string.sub(line, sepEnd + 1)
+                txt = string.gsub(txt, "<MJ_NL>", "\n")
+                txt = string.gsub(txt, "<MJ_PIPE>", "|")
+                aut = string.gsub(aut, "<MJ_NL>", "\n")
+                table.insert(newTrack, { text = txt, author = aut })
+            end
+        end
+    end
+    return newTrack
+end
+
+local btnImport = CreateFrame("Button", nil, exportFrame, "UIPanelButtonTemplate")
+btnImport:SetSize(100, 25)
+btnImport:SetPoint("BOTTOM", exportFrame, "BOTTOM", 0, 10)
+btnImport:SetText("Importar")
+btnImport:SetScript("OnClick", function()
+    local text = exportEditBox:GetText()
+    local newTrack = DecodeData(text)
+    if newTrack then
+        MyJourneyTrack = newTrack
+        AtualizarLista()
+        exportFrame:Hide()
+        print("|cFF00FF00[My Journey]|r Dados importados com sucesso!")
+    else
+        print("|cFFFF0000[My Journey]|r Erro: Formato de dados inválido.")
+    end
+end)
+
+btnExport:SetScript("OnClick", function()
+    exportFrame:Show()
+    exportEditBox:SetText(EncodeData())
+    exportEditBox:HighlightText()
+    exportEditBox:SetFocus()
 end)
 
 -- 7. Botão do Minimapa
