@@ -80,6 +80,8 @@ local content = CreateFrame("Frame", nil, scrollFrame)
 content:SetSize(320, 1)
 scrollFrame:SetScrollChild(content)
 
+local MyJourneyTooltips = {}
+
 -- 6. Função para Atualizar a Interface da Lista
 local function AtualizarLista()
     -- Limpar linhas antigas
@@ -143,20 +145,48 @@ local function AtualizarLista()
         end)
 
         -- Ativar Tooltips para Links
-        linha:SetScript("OnEnter", function()
-            local link = string.match(objetivoData.text, "(|H.-|h.-|h)")
-            if link then
-                    GameTooltip:SetOwner(linha, "ANCHOR_RIGHT")
-                    GameTooltip:SetHyperlink(link)
-                    GameTooltip:Show()
+        linha:SetScript("OnEnter", function(self)
+            local i = 1
+            local prevTooltip = nil
+            for link in string.gmatch(objetivoData.text, "(|H.-|h.-|h)") do
+                if not MyJourneyTooltips[i] then
+                    MyJourneyTooltips[i] = CreateFrame("GameTooltip", "MyJourneyTooltip"..i, UIParent, "GameTooltipTemplate")
+                end
+                local tooltip = MyJourneyTooltips[i]
+                
+                if i == 1 then
+                    tooltip:SetOwner(self, "ANCHOR_RIGHT")
+                else
+                    tooltip:SetOwner(self, "ANCHOR_NONE")
+                    tooltip:ClearAllPoints()
+                    tooltip:SetPoint("TOPLEFT", prevTooltip, "BOTTOMLEFT", 0, -2)
+                end
+                
+                tooltip:SetHyperlink(link)
+                tooltip:Show()
+                
+                prevTooltip = tooltip
+                i = i + 1
             end
         end)
-        linha:SetScript("OnLeave", function() GameTooltip:Hide() end)
+        linha:SetScript("OnLeave", function() 
+            for _, tooltip in pairs(MyJourneyTooltips) do
+                tooltip:Hide()
+            end
+        end)
             
         linha:SetScript("OnClick", function()
-            local link = string.match(objetivoData.text, "(|H.-|h.-|h)")
-            if link then
+            local isModified = IsModifiedClick()
+            local first = true
+            for link in string.gmatch(objetivoData.text, "(|H.-|h.-|h)") do
+                if isModified then
+                    -- Se tiver segurando Shift/Ctrl, processa todos (ex: manda todos pro chat)
+                    HandleModifiedItemClick(link)
+                elseif first then
+                    -- Clique normal (sem botão modificado), abre apenas a janela do primeiro link
                     SetItemRef(link, link, "LeftButton")
+                    first = false
+                end
             end
         end)
 
