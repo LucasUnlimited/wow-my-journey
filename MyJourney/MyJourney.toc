@@ -4,5 +4,6 @@
 ## Author: Lucas Mendes (Losdor)
 ## Version: 1.0.2
 ## SavedVariables: MyJourneyTrack
+## IconTexture: 3009385
 
 MyJourney.lua
