@@ -1,4 +1,4 @@
-## Interface: 120700
+## Interface: 120007, 120100
 ## Title: MyJourney
 ## Notes: Cria uma lista de tarefas personalizável que aceita links do jogo.
 ## Author: Lucas Mendes (Losdor)
