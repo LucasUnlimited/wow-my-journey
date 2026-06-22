@@ -50,6 +50,11 @@ frame:RegisterForDrag("LeftButton")
 frame:SetScript("OnDragStart", frame.StartMoving)
 frame:SetScript("OnDragStop", frame.StopMovingOrSizing)
 frame:Hide() -- Começa escondido
+-- Garantir que o frame do addon fique acima de outros elementos da HUD
+frame:SetFrameStrata("FULLSCREEN_DIALOG")
+frame:SetFrameLevel(300)
+frame:SetToplevel(true)
+frame:SetClampedToScreen(true)
 
 -- Comando de chat para abrir/fechar
 SLASH_MYJOURNEY1 = "/mj"
