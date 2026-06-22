@@ -42,11 +42,13 @@ Durante o desenvolvimento, a arquitetura do addon superou desafios específicos 
 ---
 
 ## 🎮 Como Usar
-Digite /mj no chat do jogo para abrir ou fechar a janela principal.
+Digite /mj no chat do jogo ou clique no ícone flutuante na borda do minimapa para abrir ou fechar a janela principal.
 
 Clique na caixa de texto para focar o cursor, segure Shift e clique em qualquer item nas suas bolsas, na sua coleção ou link compartilhado no chat para inseri-lo como link direto.
 
 Marque a caixa "Mostrar apenas meus objetivos" no rodapé para filtrar a lista pelo seu personagem atual.
+
+---
 
 ## 📝 Licença
 Este projeto é de código aberto e está disponível para uso e modificações pessoais sob a licença MIT. Sinta-se à vontade para contribuir com melhorias na UI ou novas lógicas de organização de dados!
