@@ -4,6 +4,8 @@ MyJourneySettings = MyJourneySettings or {
     minimapAngle = 45,
     showMinimap = true,
 }
+-- Tabela para armazenar tags por personagem
+MyJourneyTags = MyJourneyTags or {}
 
 -- Obtém a identificação do jogador atual
 local playerName, playerRealm = UnitName("player"), GetRealmName()
@@ -39,7 +41,7 @@ local function MigrateData()
     end
 end
 
--- 1. Criar a Janela Principal usando o template básico e estável
+-- Criar a Janela Principal usando o template básico e estável
 local frame = CreateFrame("Frame", "MyJourneyFrame", UIParent, "BasicFrameTemplate")
 frame:SetSize(380, 480)
 frame:SetPoint("CENTER", UIParent, "CENTER")
@@ -62,10 +64,17 @@ SlashCmdList["MYJOURNEY"] = function()
     if frame:IsShown() then frame:Hide() else frame:Show() end
 end
 
--- 2. Criar o Campo de Entrada (EditBox)
+-- Criar o Campo de Entrada (EditBox)
+
+-- Label do campo objetivo
+local lblObjetivo = frame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+lblObjetivo:SetPoint("TOPLEFT", frame, "TOPLEFT", 20, -30)
+lblObjetivo:SetText("Objetivo")
+
 local editBox = CreateFrame("EditBox", nil, frame, "InputBoxTemplate")
-editBox:SetSize(240, 30)
-editBox:SetPoint("TOPLEFT", frame, "TOPLEFT", 20, -40)
+editBox:SetHeight(30)
+editBox:SetPoint("TOPLEFT", lblObjetivo, "BOTTOMLEFT", 0, -6)
+editBox:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -20, -36)
 editBox:SetAutoFocus(false)
 
 -- MAGIA DOS LINKS: Permitir Shift+Clique para inserir itens/conquistas (Versão Moderna)
@@ -99,24 +108,104 @@ hooksecurefunc("ChatEdit_InsertLink", InserirLinkNoEditBox)
 -- Intercepta links vindos diretamente do clique (Shift+Click) em itens da bolsa/personagem
 hooksecurefunc("HandleModifiedItemClick", InserirLinkNoEditBox)
 
--- 3. Botão de Adicionar
+-- Botão de Adicionar
 local btnAdicionar = CreateFrame("Button", nil, frame, "UIPanelButtonTemplate")
-btnAdicionar:SetSize(80, 25)
-btnAdicionar:SetPoint("LEFT", editBox, "RIGHT", 10, 0)
+btnAdicionar:SetSize(90, 26)
 btnAdicionar:SetText("Adicionar")
 
--- 4. Checkbox para Filtrar por Personagem
+-- Campo para tag (abaixo do editBox)
+local tagEditBox = CreateFrame("EditBox", nil, frame, "InputBoxTemplate")
+tagEditBox:SetSize(150, 24)
+tagEditBox:SetPoint("TOPLEFT", editBox, "BOTTOMLEFT", 0, -12)
+tagEditBox:SetAutoFocus(false)
+tagEditBox:SetScript("OnEnterPressed", function(self) self:ClearFocus() end)
+
+-- Label do campo Tag
+local lblTag = frame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+lblTag:SetPoint("BOTTOM", tagEditBox, "TOP", 0, 6)
+lblTag:SetText("Tag")
+
+-- Botão para abrir lista de tags existentes
+-- Dropdown nativo para selecionar tags existentes
+local tagDropdown = CreateFrame("Frame", "MyJourneyTagDropdown", frame, "UIDropDownMenuTemplate")
+tagDropdown:SetSize(160, 30)
+tagDropdown:SetPoint("LEFT", tagEditBox, "RIGHT", 8, 0)
+
+local function TagDropdown_Initialize(self, level)
+    level = level or 1
+    if level == 1 then
+        local info = UIDropDownMenu_CreateInfo()
+        info.text = "(nenhuma)"
+        info.arg1 = ""
+        info.func = function(self)
+            UIDropDownMenu_SetSelectedID(tagDropdown, self:GetID())
+            tagEditBox:SetText(self.arg1)
+        end
+        UIDropDownMenu_AddButton(info, level)
+
+        local tags = MyJourneyTags[currentPlayer] or {}
+        for i, tag in ipairs(tags) do
+            local info = UIDropDownMenu_CreateInfo()
+            -- cor marrom para tags
+            info.text = "|cFF8B4513" .. tag .. "|r"
+            info.arg1 = tag
+            info.hasArrow = true
+            info.value = tag
+            info.func = function(self)
+                UIDropDownMenu_SetSelectedID(tagDropdown, self:GetID())
+                tagEditBox:SetText(self.arg1)
+            end
+            UIDropDownMenu_AddButton(info, level)
+        end
+    elseif level == 2 then
+        local parentTag = UIDROPDOWNMENU_MENU_VALUE
+        if not parentTag then return end
+        local info = UIDropDownMenu_CreateInfo()
+        -- adiciona ícone de remover antes do texto
+        info.text = "|T136813:14|t  Remover"
+        info.func = function()
+            -- fechar menus antes de modificar os dados para evitar erros internos
+            CloseDropDownMenus()
+            -- remove tag do array de tags do jogador
+            local tags = MyJourneyTags[currentPlayer] or {}
+            for idx, t in ipairs(tags) do
+                if t == parentTag then
+                    table.remove(tags, idx)
+                    break
+                end
+            end
+            MyJourneyTags[currentPlayer] = tags
+            -- opcional: limpa campo caso seja a tag removida
+            if tagEditBox:GetText() == parentTag then tagEditBox:SetText("") end
+            AtualizarLista()
+            -- re-inicializa dropdown para refletir alterações
+            UIDropDownMenu_Initialize(tagDropdown, TagDropdown_Initialize)
+            UIDropDownMenu_SetText(tagDropdown, "Tags")
+        end
+        UIDropDownMenu_AddButton(info, level)
+    end
+end
+
+UIDropDownMenu_Initialize(tagDropdown, TagDropdown_Initialize)
+UIDropDownMenu_SetWidth(tagDropdown, 160)
+UIDropDownMenu_SetText(tagDropdown, "Tags")
+-- Posicionar o botão Adicionar à direita do frame
+-- Posiciona o botão abaixo do campo de tag, alinhado à direita do campo de tag
+btnAdicionar:SetPoint("TOPRIGHT", tagEditBox, "BOTTOMRIGHT", 0, -12)
+
+-- Checkbox para Filtrar por Personagem
 local chkFilter = CreateFrame("CheckButton", "MyJourneyFilterCheck", frame, "ChatConfigCheckButtonTemplate")
 chkFilter:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 10, 10)
 _G[chkFilter:GetName().."Text"]:SetText(" Mostrar apenas meus objetivos")
 
--- 5. Container para a Lista de Objetivos
+-- Container para a Lista de Objetivos
 local scrollFrame = CreateFrame("ScrollFrame", nil, frame, "UIPanelScrollFrameTemplate")
-scrollFrame:SetPoint("TOPLEFT", editBox, "BOTTOMLEFT", 0, -20)
-scrollFrame:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -30, 40)
+scrollFrame:SetPoint("TOPLEFT", btnAdicionar, "BOTTOMLEFT", 0, -12)
+scrollFrame:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -20, 40)
 
 local content = CreateFrame("Frame", nil, scrollFrame)
-content:SetSize(320, 1)
+content:SetWidth(340)
+content:SetHeight(1)
 scrollFrame:SetScrollChild(content)
 
 local MyJourneyTooltips = {}
@@ -151,7 +240,7 @@ local function GetLinks(text)
     return links
 end
 
--- 6. Função para Atualizar a Interface da Lista
+-- Função para Atualizar a Interface da Lista
 local function AtualizarLista()
     -- Limpar linhas antigas
     for _, child in ipairs({content:GetChildren()}) do
@@ -179,7 +268,7 @@ local function AtualizarLista()
             if #lista > 0 then
                 -- Adicionar cabeçalho do autor
                 local header = CreateFrame("Frame", nil, content)
-                header:SetSize(310, 20)
+                header:SetSize(340, 20)
                 header:SetPoint("TOPLEFT", content, "TOPLEFT", 0, -yOffset)
                 
                 local headerText = header:CreateFontString(nil, "OVERLAY", "GameFontNormal")
@@ -193,17 +282,22 @@ local function AtualizarLista()
                         
                     local texto = linha:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
                     texto:SetPoint("TOPLEFT", linha, "TOPLEFT", 15, -4) 
-                    texto:SetWidth(180) -- reduzido para caber os botões
+                    texto:SetWidth(240) -- ajustado para caber mais texto
                     texto:SetWordWrap(true)
                     texto:SetNonSpaceWrap(true)
                     texto:SetJustifyH("LEFT")
                     texto:SetJustifyV("TOP")
                         
-                    texto:SetText(index .. ". " .. objetivoData.text)
+                    -- Exibe texto e tag (se houver)
+                    if objetivoData.tag and objetivoData.tag ~= "" then
+                        texto:SetText(index .. ". " .. objetivoData.text .. " |cFF8B4513[" .. objetivoData.tag .. "]|r")
+                    else
+                        texto:SetText(index .. ". " .. objetivoData.text)
+                    end
                         
                     local textHeight = texto:GetStringHeight()
                     local rowHeight = math.max(26, textHeight + 12)
-                    linha:SetSize(310, rowHeight)
+                    linha:SetSize(340, rowHeight)
                     linha:SetPoint("TOPLEFT", content, "TOPLEFT", 0, -yOffset)
                         
                     -- Botão para remover o objetivo
@@ -224,6 +318,12 @@ local function AtualizarLista()
                     btnEditar:SetText("Edit")
                     btnEditar:SetScript("OnClick", function()
                         editBox:SetText(objetivoData.text)
+                        -- Preenche campo de tag ao editar para reutilização
+                        if objetivoData.tag then
+                            tagEditBox:SetText(objetivoData.tag)
+                        else
+                            tagEditBox:SetText("")
+                        end
                         table.remove(MyJourneyTrack[author], index)
                         AtualizarLista()
                         editBox:SetFocus()
@@ -326,16 +426,33 @@ end)
 btnAdicionar:SetScript("OnClick", function()
     local texto = editBox:GetText()
     if texto and texto ~= "" then
+        local tag = tagEditBox:GetText() or ""
         MyJourneyTrack[currentPlayer] = MyJourneyTrack[currentPlayer] or {}
-        table.insert(MyJourneyTrack[currentPlayer], { text = texto })
+        table.insert(MyJourneyTrack[currentPlayer], { text = texto, tag = tag })
+
+        -- Salva a tag para reutilização (por personagem)
+        if tag and tag ~= "" then
+            MyJourneyTags[currentPlayer] = MyJourneyTags[currentPlayer] or {}
+            local exists = false
+            for _, t in ipairs(MyJourneyTags[currentPlayer]) do
+                if t == tag then exists = true break end
+            end
+            if not exists then table.insert(MyJourneyTags[currentPlayer], tag) end
+        end
+
+        -- Atualiza UI e limpa campos
         editBox:SetText("")
         editBox:ClearFocus()
+        tagEditBox:SetText("")
+        UIDropDownMenu_SetText(tagDropdown, "Tags")
+        CloseDropDownMenus()
+        UIDropDownMenu_Initialize(tagDropdown, TagDropdown_Initialize)
         AtualizarLista()
     end
 end)
 
 -- ==========================================
--- 6b. Funcionalidade de Exportação/Importação
+-- Funcionalidade de Exportação/Importação
 -- ==========================================
 local btnExport = CreateFrame("Button", nil, frame, "UIPanelButtonTemplate")
 btnExport:SetSize(80, 22)
@@ -373,8 +490,14 @@ local function EncodeData()
             local textStr = type(data) == "table" and data.text or tostring(data)
             local txt = string.gsub(textStr or "", "\n", "<MJ_NL>")
             txt = string.gsub(txt, "|", "<MJ_PIPE>")
+            local tagStr = ""
+            if type(data) == "table" and data.tag then
+                tagStr = string.gsub(data.tag, "\n", "<MJ_NL>")
+                tagStr = string.gsub(tagStr, "|", "<MJ_PIPE>")
+            end
             local aut = string.gsub(author, "\n", "<MJ_NL>")
-            str = str .. txt .. "<MJ_SEP>" .. aut .. "\n"
+            -- Formato: texto <MJ_TAG> tag <MJ_SEP> autor
+            str = str .. txt .. "<MJ_TAG>" .. tagStr .. "<MJ_SEP>" .. aut .. "\n"
         end
     end
     return str
@@ -390,14 +513,26 @@ local function DecodeData(str)
         if line and line ~= "" then
             local sepStart, sepEnd = string.find(line, "<MJ_SEP>")
             if sepStart then
-                local txt = string.sub(line, 1, sepStart - 1)
+                local left = string.sub(line, 1, sepStart - 1)
                 local aut = string.sub(line, sepEnd + 1)
+
+                -- left pode conter texto e tag separados por <MJ_TAG>
+                local tagStart, tagEnd = string.find(left, "<MJ_TAG>")
+                local txt = left
+                local tag = ""
+                if tagStart then
+                    txt = string.sub(left, 1, tagStart - 1)
+                    tag = string.sub(left, tagEnd + 1)
+                end
+
                 txt = string.gsub(txt, "<MJ_NL>", "\n")
                 txt = string.gsub(txt, "<MJ_PIPE>", "|")
                 aut = string.gsub(aut, "<MJ_NL>", "\n")
-                
+                tag = string.gsub(tag, "<MJ_NL>", "\n")
+                tag = string.gsub(tag, "<MJ_PIPE>", "|")
+
                 newTrack[aut] = newTrack[aut] or {}
-                table.insert(newTrack[aut], { text = txt })
+                table.insert(newTrack[aut], { text = txt, tag = tag })
             end
         end
     end
@@ -413,7 +548,21 @@ btnImport:SetScript("OnClick", function()
     local newTrack = DecodeData(text)
     if newTrack then
         MyJourneyTrack = newTrack
+        -- Reconstruir lista de tags a partir dos dados importados
+        MyJourneyTags = MyJourneyTags or {}
+        for author, lista in pairs(MyJourneyTrack) do
+            MyJourneyTags[author] = MyJourneyTags[author] or {}
+            for _, data in ipairs(lista) do
+                if data.tag and data.tag ~= "" then
+                    local exists = false
+                    for _, t in ipairs(MyJourneyTags[author]) do if t == data.tag then exists = true break end end
+                    if not exists then table.insert(MyJourneyTags[author], data.tag) end
+                end
+            end
+        end
         AtualizarLista()
+        CloseDropDownMenus()
+        UIDropDownMenu_Initialize(tagDropdown, TagDropdown_Initialize)
         exportFrame:Hide()
         print("|cFF00FF00[My Journey]|r Dados importados com sucesso!")
     else
@@ -428,7 +577,7 @@ btnExport:SetScript("OnClick", function()
     exportEditBox:SetFocus()
 end)
 
--- 7. Botão do Minimapa
+-- Botão do Minimapa
 local minimapButton = CreateFrame("Button", "MyJourneyMinimapButton", Minimap)
 minimapButton:SetSize(32, 32)
 minimapButton:SetFrameStrata("MEDIUM")
@@ -486,7 +635,7 @@ minimapButton:SetScript("OnLeave", function()
     GameTooltip:Hide()
 end)
 
--- 8. Opções de Interface (Menu do Jogo)
+-- Opções de Interface (Menu do Jogo)
 local optionsPanel = CreateFrame("Frame", "MyJourneyOptionsPanel", UIParent)
 optionsPanel.name = "My Journey"
 
@@ -520,7 +669,7 @@ local function RegistrarOpcoes()
     end
 end
 
--- 9. Carregar dados salvos quando o addon iniciar
+-- Carregar dados salvos quando o addon iniciar
 frame:RegisterEvent("ADDON_LOADED")
 frame:SetScript("OnEvent", function(self, event, addonName)
     if addonName == "MyJourney" then
@@ -543,5 +692,7 @@ frame:SetScript("OnEvent", function(self, event, addonName)
         MigrateData()
         RegistrarOpcoes()
         AtualizarLista()
+        CloseDropDownMenus()
+        UIDropDownMenu_Initialize(tagDropdown, TagDropdown_Initialize)
     end
 end)
