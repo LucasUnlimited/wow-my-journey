@@ -2,7 +2,7 @@
 ## Title: MyJourney
 ## Notes: Cria uma lista de tarefas personalizável que aceita links do jogo.
 ## Author: Lucas Mendes (Losdor)
-## Version: 1.3.3
+## Version: 1.4.0
 ## SavedVariables: MyJourneyTrack, MyJourneySettings, MyJourneyTags
 ## IconTexture: 3009385
 
