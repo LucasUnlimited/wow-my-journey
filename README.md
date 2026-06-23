@@ -8,6 +8,8 @@
 
 Desenvolvido inteiramente na **API pura da Blizzard (Lua nativo)**, o addon foi desenhado para ser extremamente leve, estável e livre de dependências de frameworks de terceiros (como o Ace3).
 
+<img width="389" height="488" alt="myjourney_frame" src="https://github.com/user-attachments/assets/4bd486da-7729-4fbc-a851-0937052d3fd9" />
+
 ---
 
 ## ✨ Funcionalidades
