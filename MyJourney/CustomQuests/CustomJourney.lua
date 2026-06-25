@@ -1,9 +1,12 @@
 -- Criar as tabelas para salvar os dados entre as sessões se não existirem
 MyJourneyTrack = MyJourneyTrack or {}
+
+-- Tabela para armazenar a posição e exibição do ícone no minimapa
 MyJourneySettings = MyJourneySettings or {
     minimapAngle = 45,
     showMinimap = true,
 }
+
 -- Tabela para armazenar tags por personagem
 MyJourneyTags = MyJourneyTags or {}
 
@@ -43,7 +46,7 @@ end
 
 -- Criar a Janela Principal usando o template básico e estável
 local frame = CreateFrame("Frame", "MyJourneyFrame", UIParent, "BasicFrameTemplate")
-frame:SetSize(380, 480)
+frame:SetSize(580, 480)
 frame:SetPoint("CENTER", UIParent, "CENTER")
 frame.TitleText:SetText("My Journey")
 frame:SetMovable(true)
@@ -64,17 +67,16 @@ SlashCmdList["MYJOURNEY"] = function()
     if frame:IsShown() then frame:Hide() else frame:Show() end
 end
 
--- Criar o Campo de Entrada (EditBox)
-
+-- Campo de Entrada do objetivo (EditBox)
 -- Label do campo objetivo
 local lblObjetivo = frame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-lblObjetivo:SetPoint("TOPLEFT", frame, "TOPLEFT", 20, -30)
+lblObjetivo:SetPoint("TOPLEFT", frame, "TOPLEFT", 20, -28)
 lblObjetivo:SetText("Objetivo")
-
+-- Campo do objetivo
 local editBox = CreateFrame("EditBox", nil, frame, "InputBoxTemplate")
 editBox:SetHeight(30)
 editBox:SetPoint("TOPLEFT", lblObjetivo, "BOTTOMLEFT", 0, -6)
-editBox:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -20, -36)
+editBox:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -20, -44)
 editBox:SetAutoFocus(false)
 
 -- MAGIA DOS LINKS: Permitir Shift+Clique para inserir itens/conquistas (Versão Moderna)
@@ -108,28 +110,24 @@ hooksecurefunc("ChatEdit_InsertLink", InserirLinkNoEditBox)
 -- Intercepta links vindos diretamente do clique (Shift+Click) em itens da bolsa/personagem
 hooksecurefunc("HandleModifiedItemClick", InserirLinkNoEditBox)
 
--- Botão de Adicionar
-local btnAdicionar = CreateFrame("Button", nil, frame, "UIPanelButtonTemplate")
-btnAdicionar:SetSize(90, 26)
-btnAdicionar:SetText("Adicionar")
-
--- Campo para tag (abaixo do editBox)
+-- Campo de Entrada das tags (tagEditBox)
+-- Campo da tag
 local tagEditBox = CreateFrame("EditBox", nil, frame, "InputBoxTemplate")
-tagEditBox:SetSize(150, 24)
-tagEditBox:SetPoint("TOPLEFT", editBox, "BOTTOMLEFT", 0, -12)
+tagEditBox:SetSize(380, 24)
+tagEditBox:SetPoint("TOPLEFT", editBox, "BOTTOMLEFT", 0, -20)
 tagEditBox:SetAutoFocus(false)
 tagEditBox:SetScript("OnEnterPressed", function(self) self:ClearFocus() end)
-
 -- Label do campo Tag
 local lblTag = frame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-lblTag:SetPoint("BOTTOM", tagEditBox, "TOP", 0, 6)
+lblTag:SetPoint("BOTTOMLEFT", tagEditBox, "TOPLEFT", 0, 6)
 lblTag:SetText("Tag")
 
--- Botão para abrir lista de tags existentes
+local AtualizarLista
+
 -- Dropdown nativo para selecionar tags existentes
 local tagDropdown = CreateFrame("Frame", "MyJourneyTagDropdown", frame, "UIDropDownMenuTemplate")
-tagDropdown:SetSize(160, 30)
-tagDropdown:SetPoint("LEFT", tagEditBox, "RIGHT", 8, 0)
+tagDropdown:SetSize(80, 30)
+tagDropdown:SetPoint("LEFT", tagEditBox, "RIGHT", 4, -4)
 
 local function TagDropdown_Initialize(self, level)
     level = level or 1
@@ -180,31 +178,67 @@ local function TagDropdown_Initialize(self, level)
             AtualizarLista()
             -- re-inicializa dropdown para refletir alterações
             UIDropDownMenu_Initialize(tagDropdown, TagDropdown_Initialize)
-            UIDropDownMenu_SetText(tagDropdown, "Tags")
+            UIDropDownMenu_SetText(tagDropdown, "Tag")
         end
         UIDropDownMenu_AddButton(info, level)
     end
 end
 
 UIDropDownMenu_Initialize(tagDropdown, TagDropdown_Initialize)
-UIDropDownMenu_SetWidth(tagDropdown, 160)
-UIDropDownMenu_SetText(tagDropdown, "Tags")
--- Posicionar o botão Adicionar à direita do frame
--- Posiciona o botão abaixo do campo de tag, alinhado à direita do campo de tag
-btnAdicionar:SetPoint("TOPRIGHT", tagEditBox, "BOTTOMRIGHT", 0, -12)
+UIDropDownMenu_SetWidth(tagDropdown, 120)
+UIDropDownMenu_SetText(tagDropdown, "Tag")
+
+-- Botão de Adicionar
+local btnAdicionar = CreateFrame("Button", nil, frame, "UIPanelButtonTemplate")
+btnAdicionar:SetSize(110, 26)
+btnAdicionar:SetText("Adicionar")
+btnAdicionar:SetPoint("TOPLEFT", tagEditBox, "BOTTOMLEFT", 0, -8)
+
+-- Lógica do Botão Adicionar
+btnAdicionar:SetScript("OnClick", function()
+    local texto = editBox:GetText()
+    if texto and texto ~= "" then
+        local tag = tagEditBox:GetText() or ""
+        MyJourneyTrack[currentPlayer] = MyJourneyTrack[currentPlayer] or {}
+        table.insert(MyJourneyTrack[currentPlayer], { text = texto, tag = tag })
+
+        -- Salva a tag para reutilização (por personagem)
+        if tag and tag ~= "" then
+            MyJourneyTags[currentPlayer] = MyJourneyTags[currentPlayer] or {}
+            local exists = false
+            for _, t in ipairs(MyJourneyTags[currentPlayer]) do
+                if t == tag then exists = true break end
+            end
+            if not exists then table.insert(MyJourneyTags[currentPlayer], tag) end
+        end
+
+        -- Atualiza UI e limpa campos
+        editBox:SetText("")
+        editBox:ClearFocus()
+        tagEditBox:SetText("")
+        UIDropDownMenu_SetText(tagDropdown, "Tags")
+        CloseDropDownMenus()
+        UIDropDownMenu_Initialize(tagDropdown, TagDropdown_Initialize)
+        AtualizarLista()
+    end
+end)
 
 -- Checkbox para Filtrar por Personagem
 local chkFilter = CreateFrame("CheckButton", "MyJourneyFilterCheck", frame, "ChatConfigCheckButtonTemplate")
 chkFilter:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 10, 10)
 _G[chkFilter:GetName().."Text"]:SetText(" Mostrar apenas meus objetivos")
+-- Lógica do Checkbox de filtro
+chkFilter:SetScript("OnClick", function()
+    AtualizarLista()
+end)
 
 -- Container para a Lista de Objetivos
 local scrollFrame = CreateFrame("ScrollFrame", nil, frame, "UIPanelScrollFrameTemplate")
-scrollFrame:SetPoint("TOPLEFT", btnAdicionar, "BOTTOMLEFT", 0, -12)
-scrollFrame:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -20, 40)
+scrollFrame:SetPoint("TOPLEFT", btnAdicionar, "BOTTOMLEFT", 0, -8)
+scrollFrame:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -40, 40)
 
 local content = CreateFrame("Frame", nil, scrollFrame)
-content:SetWidth(340)
+content:SetWidth(480)
 content:SetHeight(1)
 scrollFrame:SetScrollChild(content)
 
@@ -241,7 +275,7 @@ local function GetLinks(text)
 end
 
 -- Função para Atualizar a Interface da Lista
-local function AtualizarLista()
+AtualizarLista = function()
     -- Limpar linhas antigas
     for _, child in ipairs({content:GetChildren()}) do
         child:Hide()
@@ -249,7 +283,7 @@ local function AtualizarLista()
     end
 
     local yOffset = 0
-    local showOnlyMine = chkFilter:GetChecked()
+    local showOnlyMine = chkFilter and chkFilter:GetChecked()
 
     -- Ordenar autores (personagem atual primeiro, depois os outros alfabeticamente)
     local authors = {}
@@ -268,11 +302,11 @@ local function AtualizarLista()
             if #lista > 0 then
                 -- Adicionar cabeçalho do autor
                 local header = CreateFrame("Frame", nil, content)
-                header:SetSize(340, 20)
+                header:SetSize(520, 20) -- Ajusta a largura do cabeçalho do objetivo
                 header:SetPoint("TOPLEFT", content, "TOPLEFT", 0, -yOffset)
                 
                 local headerText = header:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-                headerText:SetPoint("LEFT", header, "LEFT", 5, 0)
+                headerText:SetPoint("LEFT", header, "LEFT", 4, 0)
                 headerText:SetText("|cFFFFFF00[" .. author .. "]|r")
                 
                 yOffset = yOffset + 24
@@ -281,8 +315,8 @@ local function AtualizarLista()
                     local linha = CreateFrame("Button", nil, content)
                         
                     local texto = linha:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
-                    texto:SetPoint("TOPLEFT", linha, "TOPLEFT", 15, -4) 
-                    texto:SetWidth(240) -- ajustado para caber mais texto
+                    texto:SetPoint("TOPLEFT", linha, "TOPLEFT", 4, -4) 
+                    texto:SetWidth(380) -- Ajusta a largura do texto do objetivo
                     texto:SetWordWrap(true)
                     texto:SetNonSpaceWrap(true)
                     texto:SetJustifyH("LEFT")
@@ -297,7 +331,7 @@ local function AtualizarLista()
                         
                     local textHeight = texto:GetStringHeight()
                     local rowHeight = math.max(26, textHeight + 12)
-                    linha:SetSize(340, rowHeight)
+                    linha:SetSize(520, rowHeight) -- Ajusta a largura da linha do objetivo
                     linha:SetPoint("TOPLEFT", content, "TOPLEFT", 0, -yOffset)
                         
                     -- Botão para remover o objetivo
@@ -417,40 +451,6 @@ local function AtualizarLista()
     content:SetHeight(math.max(1, yOffset))
 end
 
--- Lógica do Checkbox de filtro
-chkFilter:SetScript("OnClick", function()
-    AtualizarLista()
-end)
-
--- Lógica do Botão Adicionar
-btnAdicionar:SetScript("OnClick", function()
-    local texto = editBox:GetText()
-    if texto and texto ~= "" then
-        local tag = tagEditBox:GetText() or ""
-        MyJourneyTrack[currentPlayer] = MyJourneyTrack[currentPlayer] or {}
-        table.insert(MyJourneyTrack[currentPlayer], { text = texto, tag = tag })
-
-        -- Salva a tag para reutilização (por personagem)
-        if tag and tag ~= "" then
-            MyJourneyTags[currentPlayer] = MyJourneyTags[currentPlayer] or {}
-            local exists = false
-            for _, t in ipairs(MyJourneyTags[currentPlayer]) do
-                if t == tag then exists = true break end
-            end
-            if not exists then table.insert(MyJourneyTags[currentPlayer], tag) end
-        end
-
-        -- Atualiza UI e limpa campos
-        editBox:SetText("")
-        editBox:ClearFocus()
-        tagEditBox:SetText("")
-        UIDropDownMenu_SetText(tagDropdown, "Tags")
-        CloseDropDownMenus()
-        UIDropDownMenu_Initialize(tagDropdown, TagDropdown_Initialize)
-        AtualizarLista()
-    end
-end)
-
 -- ==========================================
 -- Funcionalidade de Exportação/Importação
 -- ==========================================
@@ -459,10 +459,11 @@ btnExport:SetSize(80, 22)
 btnExport:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -15, 10)
 btnExport:SetText("Backup")
 
-local exportFrame = CreateFrame("Frame", "MyJourneyExportFrame", frame, "BasicFrameTemplate")
+local exportFrame = CreateFrame("Frame", "MyJourneyExportFrame", UIParent, "BasicFrameTemplate")
 exportFrame:SetSize(320, 420)
 exportFrame:SetPoint("CENTER", UIParent, "CENTER")
-exportFrame:SetFrameStrata("DIALOG")
+exportFrame:SetFrameStrata("FULLSCREEN_DIALOG")
+exportFrame:SetToplevel(true)
 exportFrame.TitleText:SetText("Exportar / Importar")
 exportFrame:Hide()
 
