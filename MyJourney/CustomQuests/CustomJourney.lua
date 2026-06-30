@@ -345,7 +345,7 @@ btnExport:SetText("Backup")
 local exportFrame = CreateFrame("Frame", "MyJourneyExportFrame", frame, "BasicFrameTemplate")
 exportFrame:SetSize(320, 420)
 exportFrame:SetPoint("CENTER", UIParent, "CENTER")
-exportFrame:SetFrameStrata("DIALOG")
+exportFrame:SetFrameStrata("FULLSCREEN_DIALOG")
 exportFrame.TitleText:SetText("Exportar / Importar")
 exportFrame:Hide()
 
