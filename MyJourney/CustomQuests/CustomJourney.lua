@@ -51,7 +51,7 @@ frame:SetScript("OnDragStart", frame.StartMoving)
 frame:SetScript("OnDragStop", frame.StopMovingOrSizing)
 frame:Hide() -- Começa escondido
 -- Garantir que o frame do addon fique acima de outros elementos da HUD
-frame:SetFrameStrata("FULLSCREEN_DIALOG")
+frame:SetFrameStrata("FULLSCREEN")
 frame:SetFrameLevel(300)
 frame:SetToplevel(true)
 frame:SetClampedToScreen(true)
@@ -345,7 +345,7 @@ btnExport:SetText("Backup")
 local exportFrame = CreateFrame("Frame", "MyJourneyExportFrame", frame, "BasicFrameTemplate")
 exportFrame:SetSize(320, 420)
 exportFrame:SetPoint("CENTER", UIParent, "CENTER")
-exportFrame:SetFrameStrata("DIALOG")
+exportFrame:SetFrameStrata("FULLSCREEN_DIALOG")
 exportFrame.TitleText:SetText("Exportar / Importar")
 exportFrame:Hide()
 

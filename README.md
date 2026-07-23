@@ -20,6 +20,7 @@ Desenvolvido inteiramente na **API pura da Blizzard (Lua nativo)**, o addon foi 
 * **Filtro por Personagem:** Opção visual para alternar entre exibir todos os objetivos salvos na conta ou apenas os metas do personagem atual (`Nome-Reino`).
 * **Editor Integrado:** Clique em "Edit" para retornar o objetivo ao campo de entrada, permitindo correções rápidas sem perder os dados.
 * **Dimensionamento Dinâmico (Text Wrapping):** Evita que textos longos ou links extensos fiquem truncados (`...`), adaptando a altura das linhas dinamicamente para manter tudo perfeitamente legível.
+* **Backup:** Clique no botão "Backup" para copiar seus objetivos e guardar ou para colar objetivos guardados e importar.
 
 ---
 
