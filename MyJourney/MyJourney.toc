@@ -1,8 +1,9 @@
-## Interface: 120007, 120100
+## Interface: 120100, 120105
 ## Title: MyJourney
-## Notes: Cria uma lista de tarefas personalizável que aceita links do jogo.
+## Notes: Creates a customizable to-do list that accepts in-game links.
+## Notes-ptBR: Cria uma lista de tarefas personalizável que aceita links do jogo.
 ## Author: Lucas Mendes (Losdor)
-## Version: 1.3.5
+## Version: 1.3.6
 ## SavedVariables: MyJourneyTrack, MyJourneySettings
 ## IconTexture: 3009385
 

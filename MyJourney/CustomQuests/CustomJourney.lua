@@ -5,6 +5,52 @@ MyJourneySettings = MyJourneySettings or {
     showMinimap = true,
 }
 
+-- Sistema de Localização (ptBR / enUS fallback)
+local clientLocale = GetLocale()
+
+local L = {
+    -- enUS (Padrão)
+    ["ADD"] = "Add",
+    ["SHOW_ONLY_MY_GOALS"] = " Show only my goals",
+    ["EDIT"] = "Edit",
+    ["BACKUP"] = "Backup",
+    ["EXPORT_IMPORT"] = "Export / Import",
+    ["EXPORT_IMPORT_DESC"] = "Copy text with Ctrl+C to export,\nor paste (Ctrl+V) a backup and click Import.",
+    ["IMPORT"] = "Import",
+    ["DATA_IMPORTED"] = "|cFF00FF00[My Journey]|r Data imported successfully!",
+    ["DATA_ERROR"] = "|cFFFF0000[My Journey]|r Error: Invalid data format.",
+    ["MINIMAP_TOOLTIP_TITLE"] = "My Journey",
+    ["MINIMAP_TOOLTIP_CLICK"] = "Click to open/close.",
+    ["MINIMAP_TOOLTIP_DRAG"] = "Drag to move.",
+    ["SETTINGS_TITLE"] = "My Journey - Settings",
+    ["SHOW_MINIMAP_BUTTON"] = " Show minimap button",
+    ["UNKNOWN"] = "Unknown",
+}
+
+if clientLocale == "ptBR" then
+    L["ADD"] = "Adicionar"
+    L["SHOW_ONLY_MY_GOALS"] = " Mostrar apenas meus objetivos"
+    L["EDIT"] = "Editar"
+    L["BACKUP"] = "Backup"
+    L["EXPORT_IMPORT"] = "Exportar / Importar"
+    L["EXPORT_IMPORT_DESC"] = "Copie o texto com Ctrl+C para exportar,\nou cole (Ctrl+V) um backup e clique Importar."
+    L["IMPORT"] = "Importar"
+    L["DATA_IMPORTED"] = "|cFF00FF00[My Journey]|r Dados importados com sucesso!"
+    L["DATA_ERROR"] = "|cFFFF0000[My Journey]|r Erro: Formato de dados inválido."
+    L["MINIMAP_TOOLTIP_TITLE"] = "My Journey"
+    L["MINIMAP_TOOLTIP_CLICK"] = "Clique para abrir/fechar."
+    L["MINIMAP_TOOLTIP_DRAG"] = "Arraste para mover."
+    L["SETTINGS_TITLE"] = "My Journey - Configurações"
+    L["SHOW_MINIMAP_BUTTON"] = " Mostrar botão no minimapa"
+    L["UNKNOWN"] = "Desconhecido"
+end
+
+setmetatable(L, {
+    __index = function(t, k)
+        return k
+    end
+})
+
 -- Obtém a identificação do jogador atual
 local playerName, playerRealm = UnitName("player"), GetRealmName()
 local currentPlayer = playerName .. "-" .. (playerRealm or "")
@@ -26,7 +72,7 @@ local function MigrateData()
         local newTrack = {}
         for _, obj in ipairs(MyJourneyTrack) do
             local text = type(obj) == "string" and obj or (obj.text or "")
-            local author = type(obj) == "table" and obj.author or "Desconhecido"
+            local author = type(obj) == "table" and obj.author or L["UNKNOWN"]
             
             newTrack[author] = newTrack[author] or {}
             table.insert(newTrack[author], { text = text })
@@ -103,12 +149,12 @@ hooksecurefunc("HandleModifiedItemClick", InserirLinkNoEditBox)
 local btnAdicionar = CreateFrame("Button", nil, frame, "UIPanelButtonTemplate")
 btnAdicionar:SetSize(80, 25)
 btnAdicionar:SetPoint("LEFT", editBox, "RIGHT", 10, 0)
-btnAdicionar:SetText("Adicionar")
+btnAdicionar:SetText(L["ADD"])
 
 -- 4. Checkbox para Filtrar por Personagem
 local chkFilter = CreateFrame("CheckButton", "MyJourneyFilterCheck", frame, "ChatConfigCheckButtonTemplate")
 chkFilter:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 10, 10)
-_G[chkFilter:GetName().."Text"]:SetText(" Mostrar apenas meus objetivos")
+_G[chkFilter:GetName().."Text"]:SetText(L["SHOW_ONLY_MY_GOALS"])
 
 -- 5. Container para a Lista de Objetivos
 local scrollFrame = CreateFrame("ScrollFrame", nil, frame, "UIPanelScrollFrameTemplate")
@@ -193,7 +239,7 @@ local function AtualizarLista()
                         
                     local texto = linha:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
                     texto:SetPoint("TOPLEFT", linha, "TOPLEFT", 15, -4) 
-                    texto:SetWidth(180) -- reduzido para caber os botões
+                    texto:SetWidth(175) -- reduzido para caber os botões
                     texto:SetWordWrap(true)
                     texto:SetNonSpaceWrap(true)
                     texto:SetJustifyH("LEFT")
@@ -219,9 +265,9 @@ local function AtualizarLista()
 
                     -- Botão para editar o objetivo
                     local btnEditar = CreateFrame("Button", nil, linha, "UIPanelButtonTemplate")
-                    btnEditar:SetSize(40, 20)
+                    btnEditar:SetSize(45, 20)
                     btnEditar:SetPoint("RIGHT", btnRemover, "LEFT", -2, 0)
-                    btnEditar:SetText("Edit")
+                    btnEditar:SetText(L["EDIT"])
                     btnEditar:SetScript("OnClick", function()
                         editBox:SetText(objetivoData.text)
                         table.remove(MyJourneyTrack[author], index)
@@ -340,18 +386,18 @@ end)
 local btnExport = CreateFrame("Button", nil, frame, "UIPanelButtonTemplate")
 btnExport:SetSize(80, 22)
 btnExport:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -15, 10)
-btnExport:SetText("Backup")
+btnExport:SetText(L["BACKUP"])
 
 local exportFrame = CreateFrame("Frame", "MyJourneyExportFrame", frame, "BasicFrameTemplate")
 exportFrame:SetSize(320, 420)
 exportFrame:SetPoint("CENTER", UIParent, "CENTER")
 exportFrame:SetFrameStrata("FULLSCREEN_DIALOG")
-exportFrame.TitleText:SetText("Exportar / Importar")
+exportFrame.TitleText:SetText(L["EXPORT_IMPORT"])
 exportFrame:Hide()
 
 local exportDesc = exportFrame:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
 exportDesc:SetPoint("TOP", exportFrame, "TOP", 0, -30)
-exportDesc:SetText("Copie o texto com Ctrl+C para exportar,\nou cole (Ctrl+V) um backup e clique Importar.")
+exportDesc:SetText(L["EXPORT_IMPORT_DESC"])
 
 local exportScroll = CreateFrame("ScrollFrame", nil, exportFrame, "UIPanelScrollFrameTemplate")
 exportScroll:SetPoint("TOPLEFT", 15, -65)
@@ -407,7 +453,7 @@ end
 local btnImport = CreateFrame("Button", nil, exportFrame, "UIPanelButtonTemplate")
 btnImport:SetSize(100, 25)
 btnImport:SetPoint("BOTTOM", exportFrame, "BOTTOM", 0, 10)
-btnImport:SetText("Importar")
+btnImport:SetText(L["IMPORT"])
 btnImport:SetScript("OnClick", function()
     local text = exportEditBox:GetText()
     local newTrack = DecodeData(text)
@@ -415,9 +461,9 @@ btnImport:SetScript("OnClick", function()
         MyJourneyTrack = newTrack
         AtualizarLista()
         exportFrame:Hide()
-        print("|cFF00FF00[My Journey]|r Dados importados com sucesso!")
+        print(L["DATA_IMPORTED"])
     else
-        print("|cFFFF0000[My Journey]|r Erro: Formato de dados inválido.")
+        print(L["DATA_ERROR"])
     end
 end)
 
@@ -476,9 +522,9 @@ end)
 
 minimapButton:SetScript("OnEnter", function(self)
     GameTooltip:SetOwner(self, "ANCHOR_LEFT")
-    GameTooltip:SetText("My Journey")
-    GameTooltip:AddLine("Clique para abrir/fechar.", 1, 1, 1)
-    GameTooltip:AddLine("Arraste para mover.", 0.8, 0.8, 0.8)
+    GameTooltip:SetText(L["MINIMAP_TOOLTIP_TITLE"])
+    GameTooltip:AddLine(L["MINIMAP_TOOLTIP_CLICK"], 1, 1, 1)
+    GameTooltip:AddLine(L["MINIMAP_TOOLTIP_DRAG"], 0.8, 0.8, 0.8)
     GameTooltip:Show()
 end)
 
@@ -492,11 +538,11 @@ optionsPanel.name = "My Journey"
 
 local title = optionsPanel:CreateFontString(nil, "ARTWORK", "GameFontNormalLarge")
 title:SetPoint("TOPLEFT", 16, -16)
-title:SetText("My Journey - Configurações")
+title:SetText(L["SETTINGS_TITLE"])
 
 local showMinimapBtn = CreateFrame("CheckButton", "MyJourneyOptionsMinimapCheck", optionsPanel, "ChatConfigCheckButtonTemplate")
 showMinimapBtn:SetPoint("TOPLEFT", title, "BOTTOMLEFT", 0, -20)
-_G[showMinimapBtn:GetName().."Text"]:SetText(" Mostrar botão no minimapa")
+_G[showMinimapBtn:GetName().."Text"]:SetText(L["SHOW_MINIMAP_BUTTON"])
 
 showMinimapBtn:SetScript("OnClick", function(self)
     local isChecked = self:GetChecked()
