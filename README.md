@@ -8,7 +8,7 @@
 
 Developed entirely on the **pure Blizzard API (native Lua)**, the addon was designed to be extremely lightweight, stable, and free of dependencies on third-party frameworks (such as Ace3).
 
-<img width="389" height="488" alt="myjourney_frame" src="https://github.com/user-attachments/assets/4bd486da-7729-4fbc-a851-0937052d3fd9" />
+<img width="378" height="480" alt="myjourney_frame_en" src="https://github.com/user-attachments/assets/a3f8193d-7b78-4586-b97d-613d9af1d388" />
 
 ---
 
