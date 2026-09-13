@@ -11,7 +11,7 @@ local clientLocale = GetLocale()
 local L = {
     -- enUS (Padrão)
     ["ADD"] = "Add",
-    ["SHOW_ONLY_MY_GOALS"] = " Show only my goals",
+    ["SHOW_ONLY_MY_GOALS"] = "Show only my goals",
     ["EDIT"] = "Edit",
     ["BACKUP"] = "Backup",
     ["EXPORT_IMPORT"] = "Export / Import",
@@ -23,13 +23,13 @@ local L = {
     ["MINIMAP_TOOLTIP_CLICK"] = "Click to open/close.",
     ["MINIMAP_TOOLTIP_DRAG"] = "Drag to move.",
     ["SETTINGS_TITLE"] = "My Journey - Settings",
-    ["SHOW_MINIMAP_BUTTON"] = " Show minimap button",
+    ["SHOW_MINIMAP_BUTTON"] = "Show minimap button",
     ["UNKNOWN"] = "Unknown",
 }
 
 if clientLocale == "ptBR" then
     L["ADD"] = "Adicionar"
-    L["SHOW_ONLY_MY_GOALS"] = " Mostrar apenas meus objetivos"
+    L["SHOW_ONLY_MY_GOALS"] = "Mostrar apenas meus objetivos"
     L["EDIT"] = "Editar"
     L["BACKUP"] = "Backup"
     L["EXPORT_IMPORT"] = "Exportar / Importar"
@@ -41,7 +41,7 @@ if clientLocale == "ptBR" then
     L["MINIMAP_TOOLTIP_CLICK"] = "Clique para abrir/fechar."
     L["MINIMAP_TOOLTIP_DRAG"] = "Arraste para mover."
     L["SETTINGS_TITLE"] = "My Journey - Configurações"
-    L["SHOW_MINIMAP_BUTTON"] = " Mostrar botão no minimapa"
+    L["SHOW_MINIMAP_BUTTON"] = "Mostrar botão no minimapa"
     L["UNKNOWN"] = "Desconhecido"
 end
 
@@ -155,6 +155,7 @@ btnAdicionar:SetText(L["ADD"])
 local chkFilter = CreateFrame("CheckButton", "MyJourneyFilterCheck", frame, "ChatConfigCheckButtonTemplate")
 chkFilter:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 10, 10)
 _G[chkFilter:GetName().."Text"]:SetText(L["SHOW_ONLY_MY_GOALS"])
+chkFilter:SetChecked(true)
 
 -- 5. Container para a Lista de Objetivos
 local scrollFrame = CreateFrame("ScrollFrame", nil, frame, "UIPanelScrollFrameTemplate")
