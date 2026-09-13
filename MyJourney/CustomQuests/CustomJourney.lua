@@ -3,6 +3,7 @@ MyJourneyTrack = MyJourneyTrack or {}
 MyJourneySettings = MyJourneySettings or {
     minimapAngle = 45,
     showMinimap = true,
+    collapsed = {},
 }
 
 -- Sistema de Localização (ptBR / enUS fallback)
@@ -25,6 +26,8 @@ local L = {
     ["SETTINGS_TITLE"] = "My Journey - Settings",
     ["SHOW_MINIMAP_BUTTON"] = "Show minimap button",
     ["UNKNOWN"] = "Unknown",
+    ["COLLAPSE"] = "Click to collapse",
+    ["EXPAND"] = "Click to expand",
 }
 
 if clientLocale == "ptBR" then
@@ -43,6 +46,8 @@ if clientLocale == "ptBR" then
     L["SETTINGS_TITLE"] = "My Journey - Configurações"
     L["SHOW_MINIMAP_BUTTON"] = "Mostrar botão no minimapa"
     L["UNKNOWN"] = "Desconhecido"
+    L["COLLAPSE"] = "Clique para recolher"
+    L["EXPAND"] = "Clique para expandir"
 end
 
 setmetatable(L, {
@@ -224,18 +229,49 @@ local function AtualizarLista()
         if not showOnlyMine or author == currentPlayer then
             local lista = MyJourneyTrack[author]
             if #lista > 0 then
-                -- Adicionar cabeçalho do autor
-                local header = CreateFrame("Frame", nil, content)
+                local isCollapsed = MyJourneySettings.collapsed and MyJourneySettings.collapsed[author]
+
+                -- Adicionar cabeçalho do autor (clicável para recolher/expandir)
+                local header = CreateFrame("Button", nil, content)
                 header:SetSize(310, 20)
                 header:SetPoint("TOPLEFT", content, "TOPLEFT", 0, -yOffset)
+                header:SetHighlightTexture("Interface\\Buttons\\UI-Listbox-Highlight", "ADD")
                 
+                local icon = header:CreateTexture(nil, "ARTWORK")
+                icon:SetSize(14, 14)
+                icon:SetPoint("LEFT", header, "LEFT", 2, 0)
+                if isCollapsed then
+                    icon:SetTexture("Interface\\Buttons\\UI-PlusButton-Up")
+                else
+                    icon:SetTexture("Interface\\Buttons\\UI-MinusButton-Up")
+                end
+
                 local headerText = header:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-                headerText:SetPoint("LEFT", header, "LEFT", 5, 0)
-                headerText:SetText("|cFFFFFF00[" .. author .. "]|r")
+                headerText:SetPoint("LEFT", icon, "RIGHT", 4, 0)
+                headerText:SetText("|cFFFFFF00[" .. author .. "]|r |cFF888888(" .. #lista .. ")|r")
+
+                header:SetScript("OnClick", function()
+                    MyJourneySettings.collapsed = MyJourneySettings.collapsed or {}
+                    MyJourneySettings.collapsed[author] = not MyJourneySettings.collapsed[author]
+                    GameTooltip:Hide()
+                    AtualizarLista()
+                end)
+
+                header:SetScript("OnEnter", function(self)
+                    GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+                    local collapsedNow = MyJourneySettings.collapsed and MyJourneySettings.collapsed[author]
+                    GameTooltip:SetText(collapsedNow and L["EXPAND"] or L["COLLAPSE"])
+                    GameTooltip:Show()
+                end)
+
+                header:SetScript("OnLeave", function()
+                    GameTooltip:Hide()
+                end)
                 
                 yOffset = yOffset + 24
 
-                for index, objetivoData in ipairs(lista) do
+                if not isCollapsed then
+                    for index, objetivoData in ipairs(lista) do
                     local linha = CreateFrame("Button", nil, content)
                         
                     local texto = linha:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
@@ -355,6 +391,7 @@ local function AtualizarLista()
                     end)
 
                     yOffset = yOffset + rowHeight
+                    end
                 end
             end
         end
@@ -377,6 +414,9 @@ btnAdicionar:SetScript("OnClick", function()
         table.insert(MyJourneyTrack[currentPlayer], { text = texto })
         editBox:SetText("")
         editBox:ClearFocus()
+        if MyJourneySettings.collapsed then
+            MyJourneySettings.collapsed[currentPlayer] = false
+        end
         AtualizarLista()
     end
 end)
@@ -575,6 +615,7 @@ frame:SetScript("OnEvent", function(self, event, addonName)
         MyJourneySettings = MyJourneySettings or {}
         if MyJourneySettings.minimapAngle == nil then MyJourneySettings.minimapAngle = 45 end
         if MyJourneySettings.showMinimap == nil then MyJourneySettings.showMinimap = true end
+        if MyJourneySettings.collapsed == nil then MyJourneySettings.collapsed = {} end
 
         -- Aplica as configurações do minimapa
         UpdateMinimapButton()
