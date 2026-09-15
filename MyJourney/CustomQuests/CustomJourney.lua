@@ -12,6 +12,8 @@ local clientLocale = GetLocale()
 local L = {
     -- enUS (Padrão)
     ["ADD"] = "Add",
+    ["SAVE"] = "Save",
+    ["CANCEL"] = "Cancel",
     ["SHOW_ONLY_MY_GOALS"] = "Show only my goals",
     ["EDIT"] = "Edit",
     ["BACKUP"] = "Backup",
@@ -32,6 +34,8 @@ local L = {
 
 if clientLocale == "ptBR" then
     L["ADD"] = "Adicionar"
+    L["SAVE"] = "Salvar"
+    L["CANCEL"] = "Cancelar"
     L["SHOW_ONLY_MY_GOALS"] = "Mostrar apenas meus objetivos"
     L["EDIT"] = "Editar"
     L["BACKUP"] = "Backup"
@@ -113,6 +117,13 @@ SlashCmdList["MYJOURNEY"] = function()
     if frame:IsShown() then frame:Hide() else frame:Show() end
 end
 
+-- Variáveis de controle de edição e funções
+local AtualizarLista
+local CancelarEdicao
+local IniciarEdicao
+local SalvarOuAdicionar
+local editingGoal = nil
+
 -- 2. Criar o Campo de Entrada (EditBox)
 local editBox = CreateFrame("EditBox", nil, frame, "InputBoxTemplate")
 editBox:SetSize(240, 30)
@@ -122,6 +133,20 @@ editBox:SetAutoFocus(false)
 -- MAGIA DOS LINKS: Permitir Shift+Clique para inserir itens/conquistas (Versão Moderna)
 editBox:SetScript("OnMouseDown", function(self)
     self:SetFocus()
+end)
+
+editBox:SetScript("OnEnterPressed", function(self)
+    if SalvarOuAdicionar then
+        SalvarOuAdicionar()
+    end
+end)
+
+editBox:SetScript("OnEscapePressed", function(self)
+    if editingGoal then
+        CancelarEdicao()
+    else
+        self:ClearFocus()
+    end
 end)
 
 local ultimoLink, tempoLink = nil, 0
@@ -150,11 +175,63 @@ hooksecurefunc("ChatEdit_InsertLink", InserirLinkNoEditBox)
 -- Intercepta links vindos diretamente do clique (Shift+Click) em itens da bolsa/personagem
 hooksecurefunc("HandleModifiedItemClick", InserirLinkNoEditBox)
 
--- 3. Botão de Adicionar
+-- 3. Botão de Adicionar e Botão de Cancelar
 local btnAdicionar = CreateFrame("Button", nil, frame, "UIPanelButtonTemplate")
 btnAdicionar:SetSize(80, 25)
 btnAdicionar:SetPoint("LEFT", editBox, "RIGHT", 10, 0)
 btnAdicionar:SetText(L["ADD"])
+
+local btnCancelar = CreateFrame("Button", nil, frame, "UIPanelButtonTemplate")
+btnCancelar:SetSize(22, 25)
+btnCancelar:SetPoint("LEFT", btnAdicionar, "RIGHT", 4, 0)
+btnCancelar:SetText("X")
+btnCancelar:Hide()
+
+btnCancelar:SetScript("OnEnter", function(self)
+    GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+    GameTooltip:SetText(L["CANCEL"])
+    GameTooltip:Show()
+end)
+
+btnCancelar:SetScript("OnLeave", function()
+    GameTooltip:Hide()
+end)
+
+CancelarEdicao = function()
+    editingGoal = nil
+    editBox:SetText("")
+    editBox:ClearFocus()
+    btnAdicionar:SetText(L["ADD"])
+    btnAdicionar:SetWidth(80)
+    btnAdicionar:ClearAllPoints()
+    btnAdicionar:SetPoint("LEFT", editBox, "RIGHT", 10, 0)
+    if btnCancelar then
+        btnCancelar:Hide()
+    end
+    if AtualizarLista then
+        AtualizarLista()
+    end
+end
+
+IniciarEdicao = function(author, objetivoData)
+    editingGoal = { author = author, item = objetivoData }
+    editBox:SetText(objetivoData.text)
+    editBox:SetFocus()
+    btnAdicionar:SetText(L["SAVE"])
+    btnAdicionar:SetWidth(58)
+    btnAdicionar:ClearAllPoints()
+    btnAdicionar:SetPoint("LEFT", editBox, "RIGHT", 6, 0)
+    if btnCancelar then
+        btnCancelar:Show()
+    end
+    if AtualizarLista then
+        AtualizarLista()
+    end
+end
+
+btnCancelar:SetScript("OnClick", function()
+    CancelarEdicao()
+end)
 
 -- 4. Checkbox para Filtrar por Personagem
 local chkFilter = CreateFrame("CheckButton", "MyJourneyFilterCheck", frame, "ChatConfigCheckButtonTemplate")
@@ -204,7 +281,7 @@ local function GetLinks(text)
 end
 
 -- 6. Função para Atualizar a Interface da Lista
-local function AtualizarLista()
+AtualizarLista = function()
     -- Limpar linhas antigas
     for _, child in ipairs({content:GetChildren()}) do
         child:Hide()
@@ -273,6 +350,7 @@ local function AtualizarLista()
                 if not isCollapsed then
                     for index, objetivoData in ipairs(lista) do
                     local linha = CreateFrame("Button", nil, content)
+                    local isEditingThis = editingGoal and editingGoal.item == objetivoData
                         
                     local texto = linha:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
                     texto:SetPoint("TOPLEFT", linha, "TOPLEFT", 15, -4) 
@@ -283,6 +361,9 @@ local function AtualizarLista()
                     texto:SetJustifyV("TOP")
                         
                     texto:SetText(index .. ". " .. objetivoData.text)
+                    if isEditingThis then
+                        texto:SetTextColor(1, 0.82, 0)
+                    end
                         
                     local textHeight = texto:GetStringHeight()
                     local rowHeight = math.max(26, textHeight + 12)
@@ -296,6 +377,18 @@ local function AtualizarLista()
                     btnRemover:SetNormalTexture(136813) -- ID do X vermelho
                     btnRemover:SetHighlightTexture("Interface\\Buttons\\ButtonHilight-Square", "ADD")
                     btnRemover:SetScript("OnClick", function()
+                        if editingGoal and editingGoal.item == objetivoData then
+                            editingGoal = nil
+                            editBox:SetText("")
+                            editBox:ClearFocus()
+                            btnAdicionar:SetText(L["ADD"])
+                            btnAdicionar:SetWidth(80)
+                            btnAdicionar:ClearAllPoints()
+                            btnAdicionar:SetPoint("LEFT", editBox, "RIGHT", 10, 0)
+                            if btnCancelar then
+                                btnCancelar:Hide()
+                            end
+                        end
                         table.remove(MyJourneyTrack[author], index)
                         AtualizarLista()
                     end)
@@ -305,11 +398,13 @@ local function AtualizarLista()
                     btnEditar:SetSize(45, 20)
                     btnEditar:SetPoint("RIGHT", btnRemover, "LEFT", -2, 0)
                     btnEditar:SetText(L["EDIT"])
+                    if isEditingThis then
+                        btnEditar:Disable()
+                    else
+                        btnEditar:Enable()
+                    end
                     btnEditar:SetScript("OnClick", function()
-                        editBox:SetText(objetivoData.text)
-                        table.remove(MyJourneyTrack[author], index)
-                        AtualizarLista()
-                        editBox:SetFocus()
+                        IniciarEdicao(author, objetivoData)
                     end)
 
                     -- Botão Descer
@@ -406,20 +501,42 @@ chkFilter:SetScript("OnClick", function()
     AtualizarLista()
 end)
 
--- Lógica do Botão Adicionar
-btnAdicionar:SetScript("OnClick", function()
+-- Lógica do Botão Adicionar / Salvar
+SalvarOuAdicionar = function()
     local texto = editBox:GetText()
     if texto and texto ~= "" then
-        MyJourneyTrack[currentPlayer] = MyJourneyTrack[currentPlayer] or {}
-        table.insert(MyJourneyTrack[currentPlayer], { text = texto })
-        editBox:SetText("")
-        editBox:ClearFocus()
-        if MyJourneySettings.collapsed then
-            MyJourneySettings.collapsed[currentPlayer] = false
+        if editingGoal and editingGoal.item then
+            local authorList = MyJourneyTrack[editingGoal.author]
+            local found = false
+            if authorList then
+                for _, obj in ipairs(authorList) do
+                    if obj == editingGoal.item then
+                        obj.text = texto
+                        found = true
+                        break
+                    end
+                end
+            end
+            if not found then
+                local targetAuthor = editingGoal.author or currentPlayer
+                MyJourneyTrack[targetAuthor] = MyJourneyTrack[targetAuthor] or {}
+                table.insert(MyJourneyTrack[targetAuthor], { text = texto })
+            end
+            CancelarEdicao()
+        else
+            MyJourneyTrack[currentPlayer] = MyJourneyTrack[currentPlayer] or {}
+            table.insert(MyJourneyTrack[currentPlayer], { text = texto })
+            editBox:SetText("")
+            editBox:ClearFocus()
+            if MyJourneySettings.collapsed then
+                MyJourneySettings.collapsed[currentPlayer] = false
+            end
+            AtualizarLista()
         end
-        AtualizarLista()
     end
-end)
+end
+
+btnAdicionar:SetScript("OnClick", SalvarOuAdicionar)
 
 -- ==========================================
 -- 6b. Funcionalidade de Exportação/Importação
@@ -499,6 +616,9 @@ btnImport:SetScript("OnClick", function()
     local text = exportEditBox:GetText()
     local newTrack = DecodeData(text)
     if newTrack then
+        if editingGoal then
+            CancelarEdicao()
+        end
         MyJourneyTrack = newTrack
         AtualizarLista()
         exportFrame:Hide()
