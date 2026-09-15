@@ -14,6 +14,7 @@ local L = {
     ["ADD"] = "Add",
     ["SAVE"] = "Save",
     ["CANCEL"] = "Cancel",
+    ["REMOVE"] = "Remove",
     ["SHOW_ONLY_MY_GOALS"] = "Show only my goals",
     ["EDIT"] = "Edit",
     ["BACKUP"] = "Backup",
@@ -36,6 +37,7 @@ if clientLocale == "ptBR" then
     L["ADD"] = "Adicionar"
     L["SAVE"] = "Salvar"
     L["CANCEL"] = "Cancelar"
+    L["REMOVE"] = "Remover"
     L["SHOW_ONLY_MY_GOALS"] = "Mostrar apenas meus objetivos"
     L["EDIT"] = "Editar"
     L["BACKUP"] = "Backup"
@@ -371,12 +373,20 @@ AtualizarLista = function()
                     linha:SetPoint("TOPLEFT", content, "TOPLEFT", 0, -yOffset)
                         
                     -- Botão para remover o objetivo
-                    local btnRemover = CreateFrame("Button", nil, linha)
+                    local btnRemover = CreateFrame("Button", nil, linha, "UIPanelButtonTemplate")
                     btnRemover:SetSize(20, 20)
                     btnRemover:SetPoint("TOPRIGHT", linha, "TOPRIGHT", -5, -4)
-                    btnRemover:SetNormalTexture(136813) -- ID do X vermelho
-                    btnRemover:SetHighlightTexture("Interface\\Buttons\\ButtonHilight-Square", "ADD")
+                    btnRemover:SetText("X")
+                    btnRemover:SetScript("OnEnter", function(self)
+                        GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+                        GameTooltip:SetText(L["REMOVE"])
+                        GameTooltip:Show()
+                    end)
+                    btnRemover:SetScript("OnLeave", function()
+                        GameTooltip:Hide()
+                    end)
                     btnRemover:SetScript("OnClick", function()
+                        GameTooltip:Hide()
                         if editingGoal and editingGoal.item == objetivoData then
                             editingGoal = nil
                             editBox:SetText("")
