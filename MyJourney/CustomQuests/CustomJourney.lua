@@ -130,10 +130,11 @@ local UpdateInputLayout
 local UpdateInputHeight
 local editingGoal = nil
 
--- 2. Criar o Campo de Entrada (Container, Ícone +, EditBox e Placeholder)
+-- 2. Criar o Campo de Entrada (Container, Ícone !, EditBox e Placeholder)
 local inputContainer = CreateFrame("Frame", nil, frame, BackdropTemplateMixin and "BackdropTemplate" or nil)
 inputContainer:SetPoint("TOPLEFT", frame, "TOPLEFT", 20, -38)
 inputContainer:SetSize(335, 28)
+inputContainer:SetClipsChildren(true)
 
 inputContainer:SetBackdrop({
     bgFile = "Interface\\Buttons\\WHITE8X8",
@@ -146,16 +147,14 @@ inputContainer:SetBackdrop({
 inputContainer:SetBackdropColor(0.06, 0.06, 0.06, 0.75)
 inputContainer:SetBackdropBorderColor(0.4, 0.4, 0.4, 0.7)
 
--- Botão/Ícone + na esquerda
-local plusBtn = CreateFrame("Button", nil, inputContainer)
-plusBtn:SetSize(14, 14)
-plusBtn:SetPoint("TOPLEFT", inputContainer, "TOPLEFT", 7, -7)
+-- Ícone de Missão (!) na esquerda
+local questBtn = CreateFrame("Button", nil, inputContainer)
+questBtn:SetSize(16, 16)
+questBtn:SetPoint("TOPLEFT", inputContainer, "TOPLEFT", 6, -6)
 
-local plusIcon = plusBtn:CreateTexture(nil, "ARTWORK")
-plusIcon:SetAllPoints()
-plusIcon:SetTexture("Interface\\Buttons\\UI-PlusButton-Up")
-
-plusBtn:SetHighlightTexture("Interface\\Buttons\\UI-PlusButton-Hilight", "ADD")
+local questIcon = questBtn:CreateTexture(nil, "ARTWORK")
+questIcon:SetAllPoints()
+questIcon:SetTexture("Interface\\GossipFrame\\AvailableQuestIcon")
 
 -- EditBox multiline
 local editBox = CreateFrame("EditBox", nil, inputContainer)
@@ -182,8 +181,8 @@ measureText:Hide()
 measureText:SetWordWrap(true)
 measureText:SetNonSpaceWrap(true)
 
--- Clicar em qualquer parte do container ou no botão + foca o editbox
-plusBtn:SetScript("OnClick", function()
+-- Clicar em qualquer parte do container ou no ícone de missão foca o editbox
+questBtn:SetScript("OnClick", function()
     editBox:SetFocus()
 end)
 
@@ -220,7 +219,7 @@ btnCancelar:SetScript("OnClick", function()
 end)
 
 UpdateInputHeight = function()
-    local text = editBox:GetText()
+    local text = editBox:GetText() or ""
     local editWidth = editBox:GetWidth()
     if not editWidth or editWidth <= 0 then
         local isCompact = btnAdicionar:IsShown()
@@ -228,15 +227,23 @@ UpdateInputHeight = function()
     end
 
     measureText:SetWidth(editWidth)
-    if text and text ~= "" then
-        measureText:SetText(text)
-    else
-        measureText:SetText("A")
-    end
 
-    local textHeight = measureText:GetStringHeight()
-    local targetHeight = math.max(28, math.min(100, math.ceil(textHeight + 14)))
+    -- Conta quebras de linha explícitas para garantir a altura mínima correspondente
+    local _, newlineCount = string.gsub(text, "\n", "")
+
+    -- Adiciona espaço após cada newline para que linhas vazias ou no final sejam medidas pelo FontString
+    local measureString = string.gsub(text, "\n", "\n ")
+    if measureString == "" then
+        measureString = " "
+    end
+    measureText:SetText(measureString)
+
+    local stringHeight = measureText:GetStringHeight()
+    local minLinesHeight = (newlineCount + 1) * 15
+    local textHeight = math.max(stringHeight, minLinesHeight)
+    local targetHeight = math.max(28, math.min(120, math.ceil(textHeight + 14)))
     inputContainer:SetHeight(targetHeight)
+    editBox:SetHeight(targetHeight - 12)
 end
 
 UpdateInputLayout = function()
