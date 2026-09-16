@@ -3,7 +3,7 @@
 ## Notes: Creates a customizable to-do list that accepts in-game links.
 ## Notes-ptBR: Cria uma lista de tarefas personalizável que aceita links do jogo.
 ## Author: Lucas Mendes (Losdor)
-## Version: 1.3.6
+## Version: 1.3.8
 ## SavedVariables: MyJourneyTrack, MyJourneySettings
 ## IconTexture: 3009385
 
