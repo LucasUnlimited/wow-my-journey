@@ -32,6 +32,7 @@ local L = {
     ["COLLAPSE"] = "Click to collapse",
     ["EXPAND"] = "Click to expand",
     ["PLACEHOLDER_GOAL"] = "Write your Goal and add to the list",
+    ["CLEAR"] = "Clear",
 }
 
 if clientLocale == "ptBR" then
@@ -56,6 +57,7 @@ if clientLocale == "ptBR" then
     L["COLLAPSE"] = "Clique para recolher"
     L["EXPAND"] = "Clique para expandir"
     L["PLACEHOLDER_GOAL"] = "Escreva seu objetivo e adicione à lista"
+    L["CLEAR"] = "Limpar"
 end
 
 setmetatable(L, {
@@ -115,6 +117,9 @@ frame:SetFrameLevel(300)
 frame:SetToplevel(true)
 frame:SetClampedToScreen(true)
 
+-- Fechar com ESC quando nada estiver sendo inserido ou editado
+table.insert(UISpecialFrames, "MyJourneyFrame")
+
 -- Comando de chat para abrir/fechar
 SLASH_MYJOURNEY1 = "/mj"
 SlashCmdList["MYJOURNEY"] = function()
@@ -141,46 +146,113 @@ inputBg:SetPoint("TOPLEFT", inputContainer, "TOPLEFT", 2, -2)
 inputBg:SetPoint("BOTTOMRIGHT", inputContainer, "BOTTOMRIGHT", -2, 2)
 inputBg:SetColorTexture(0.02, 0.02, 0.02, 0.92)
 
--- Borda clássica da Blizzard (ChatFrameEditBox)
-local borderLeft = inputContainer:CreateTexture(nil, "BACKGROUND", nil, -5)
-borderLeft:SetTexture("Interface\\ChatFrame\\UI-ChatInputBorder-Left2")
-borderLeft:SetWidth(32)
-borderLeft:SetPoint("TOPLEFT", inputContainer, "TOPLEFT", -6, 2)
-borderLeft:SetPoint("BOTTOMLEFT", inputContainer, "BOTTOMLEFT", -6, -2)
+-- Borda clássica da Blizzard (9-slice usando ChatFrameEditBox)
+local borderTL = inputContainer:CreateTexture(nil, "BACKGROUND", nil, -5)
+borderTL:SetTexture("Interface\\ChatFrame\\UI-ChatInputBorder-Left2")
+borderTL:SetSize(32, 14)
+borderTL:SetTexCoord(0, 1, 0, 14/32)
+borderTL:SetPoint("TOPLEFT", inputContainer, "TOPLEFT", -6, 2)
 
-local borderRight = inputContainer:CreateTexture(nil, "BACKGROUND", nil, -5)
-borderRight:SetTexture("Interface\\ChatFrame\\UI-ChatInputBorder-Right2")
-borderRight:SetWidth(32)
-borderRight:SetPoint("TOPRIGHT", inputContainer, "TOPRIGHT", 6, 2)
-borderRight:SetPoint("BOTTOMRIGHT", inputContainer, "BOTTOMRIGHT", 6, -2)
+local borderTR = inputContainer:CreateTexture(nil, "BACKGROUND", nil, -5)
+borderTR:SetTexture("Interface\\ChatFrame\\UI-ChatInputBorder-Right2")
+borderTR:SetSize(32, 14)
+borderTR:SetTexCoord(0, 1, 0, 14/32)
+borderTR:SetPoint("TOPRIGHT", inputContainer, "TOPRIGHT", 6, 2)
 
-local borderMid = inputContainer:CreateTexture(nil, "BACKGROUND", nil, -5)
-borderMid:SetTexture("Interface\\ChatFrame\\UI-ChatInputBorder-Mid2")
-borderMid:SetHorizTile(true)
-borderMid:SetPoint("TOPLEFT", borderLeft, "TOPRIGHT", 0, 0)
-borderMid:SetPoint("BOTTOMRIGHT", borderRight, "BOTTOMLEFT", 0, 0)
+local borderT = inputContainer:CreateTexture(nil, "BACKGROUND", nil, -5)
+borderT:SetTexture("Interface\\ChatFrame\\UI-ChatInputBorder-Mid2")
+borderT:SetHeight(14)
+borderT:SetTexCoord(0, 1, 0, 14/32)
+borderT:SetHorizTile(true)
+borderT:SetPoint("TOPLEFT", borderTL, "TOPRIGHT", 0, 0)
+borderT:SetPoint("TOPRIGHT", borderTR, "TOPLEFT", 0, 0)
 
--- Texturas de foco ativado (ChatFrameEditBox Focus)
-local focusLeft = inputContainer:CreateTexture(nil, "BORDER", nil, 1)
-focusLeft:SetTexture("Interface\\ChatFrame\\UI-ChatInputBorderFocus-Left")
-focusLeft:SetWidth(32)
-focusLeft:SetPoint("TOPLEFT", borderLeft, "TOPLEFT", 0, 0)
-focusLeft:SetPoint("BOTTOMLEFT", borderLeft, "BOTTOMLEFT", 0, 0)
-focusLeft:Hide()
+local borderBL = inputContainer:CreateTexture(nil, "BACKGROUND", nil, -5)
+borderBL:SetTexture("Interface\\ChatFrame\\UI-ChatInputBorder-Left2")
+borderBL:SetSize(32, 14)
+borderBL:SetTexCoord(0, 1, 18/32, 1)
+borderBL:SetPoint("BOTTOMLEFT", inputContainer, "BOTTOMLEFT", -6, -2)
 
-local focusRight = inputContainer:CreateTexture(nil, "BORDER", nil, 1)
-focusRight:SetTexture("Interface\\ChatFrame\\UI-ChatInputBorderFocus-Right")
-focusRight:SetWidth(32)
-focusRight:SetPoint("TOPRIGHT", borderRight, "TOPRIGHT", 0, 0)
-focusRight:SetPoint("BOTTOMRIGHT", borderRight, "BOTTOMRIGHT", 0, 0)
-focusRight:Hide()
+local borderBR = inputContainer:CreateTexture(nil, "BACKGROUND", nil, -5)
+borderBR:SetTexture("Interface\\ChatFrame\\UI-ChatInputBorder-Right2")
+borderBR:SetSize(32, 14)
+borderBR:SetTexCoord(0, 1, 18/32, 1)
+borderBR:SetPoint("BOTTOMRIGHT", inputContainer, "BOTTOMRIGHT", 6, -2)
 
-local focusMid = inputContainer:CreateTexture(nil, "BORDER", nil, 1)
-focusMid:SetTexture("Interface\\ChatFrame\\UI-ChatInputBorderFocus-Mid")
-focusMid:SetHorizTile(true)
-focusMid:SetPoint("TOPLEFT", focusLeft, "TOPRIGHT", 0, 0)
-focusMid:SetPoint("BOTTOMRIGHT", focusRight, "BOTTOMLEFT", 0, 0)
-focusMid:Hide()
+local borderB = inputContainer:CreateTexture(nil, "BACKGROUND", nil, -5)
+borderB:SetTexture("Interface\\ChatFrame\\UI-ChatInputBorder-Mid2")
+borderB:SetHeight(14)
+borderB:SetTexCoord(0, 1, 18/32, 1)
+borderB:SetHorizTile(true)
+borderB:SetPoint("BOTTOMLEFT", borderBL, "BOTTOMRIGHT", 0, 0)
+borderB:SetPoint("BOTTOMRIGHT", borderBR, "BOTTOMLEFT", 0, 0)
+
+local borderL = inputContainer:CreateTexture(nil, "BACKGROUND", nil, -5)
+borderL:SetTexture("Interface\\ChatFrame\\UI-ChatInputBorder-Left2")
+borderL:SetWidth(32)
+borderL:SetTexCoord(0, 1, 14/32, 18/32)
+borderL:SetPoint("TOPLEFT", borderTL, "BOTTOMLEFT", 0, 0)
+borderL:SetPoint("BOTTOMLEFT", borderBL, "TOPLEFT", 0, 0)
+
+local borderR = inputContainer:CreateTexture(nil, "BACKGROUND", nil, -5)
+borderR:SetTexture("Interface\\ChatFrame\\UI-ChatInputBorder-Right2")
+borderR:SetWidth(32)
+borderR:SetTexCoord(0, 1, 14/32, 18/32)
+borderR:SetPoint("TOPRIGHT", borderTR, "BOTTOMRIGHT", 0, 0)
+borderR:SetPoint("BOTTOMRIGHT", borderBR, "TOPRIGHT", 0, 0)
+
+-- Texturas de foco ativado (9-slice do ChatFrameEditBox Focus)
+local focusTL = inputContainer:CreateTexture(nil, "BORDER", nil, 1)
+focusTL:SetTexture("Interface\\ChatFrame\\UI-ChatInputBorderFocus-Left")
+focusTL:SetTexCoord(0, 1, 0, 14/32)
+focusTL:SetAllPoints(borderTL)
+focusTL:Hide()
+
+local focusTR = inputContainer:CreateTexture(nil, "BORDER", nil, 1)
+focusTR:SetTexture("Interface\\ChatFrame\\UI-ChatInputBorderFocus-Right")
+focusTR:SetTexCoord(0, 1, 0, 14/32)
+focusTR:SetAllPoints(borderTR)
+focusTR:Hide()
+
+local focusT = inputContainer:CreateTexture(nil, "BORDER", nil, 1)
+focusT:SetTexture("Interface\\ChatFrame\\UI-ChatInputBorderFocus-Mid")
+focusT:SetTexCoord(0, 1, 0, 14/32)
+focusT:SetHorizTile(true)
+focusT:SetAllPoints(borderT)
+focusT:Hide()
+
+local focusBL = inputContainer:CreateTexture(nil, "BORDER", nil, 1)
+focusBL:SetTexture("Interface\\ChatFrame\\UI-ChatInputBorderFocus-Left")
+focusBL:SetTexCoord(0, 1, 18/32, 1)
+focusBL:SetAllPoints(borderBL)
+focusBL:Hide()
+
+local focusBR = inputContainer:CreateTexture(nil, "BORDER", nil, 1)
+focusBR:SetTexture("Interface\\ChatFrame\\UI-ChatInputBorderFocus-Right")
+focusBR:SetTexCoord(0, 1, 18/32, 1)
+focusBR:SetAllPoints(borderBR)
+focusBR:Hide()
+
+local focusB = inputContainer:CreateTexture(nil, "BORDER", nil, 1)
+focusB:SetTexture("Interface\\ChatFrame\\UI-ChatInputBorderFocus-Mid")
+focusB:SetTexCoord(0, 1, 18/32, 1)
+focusB:SetHorizTile(true)
+focusB:SetAllPoints(borderB)
+focusB:Hide()
+
+local focusL = inputContainer:CreateTexture(nil, "BORDER", nil, 1)
+focusL:SetTexture("Interface\\ChatFrame\\UI-ChatInputBorderFocus-Left")
+focusL:SetTexCoord(0, 1, 14/32, 18/32)
+focusL:SetAllPoints(borderL)
+focusL:Hide()
+
+local focusR = inputContainer:CreateTexture(nil, "BORDER", nil, 1)
+focusR:SetTexture("Interface\\ChatFrame\\UI-ChatInputBorderFocus-Right")
+focusR:SetTexCoord(0, 1, 14/32, 18/32)
+focusR:SetAllPoints(borderR)
+focusR:Hide()
+
+local focusTextures = { focusTL, focusTR, focusT, focusBL, focusBR, focusB, focusL, focusR }
 
 -- Ícone de Missão (!) na esquerda
 local questBtn = CreateFrame("Button", nil, inputContainer)
@@ -191,7 +263,7 @@ local questIcon = questBtn:CreateTexture(nil, "ARTWORK")
 questIcon:SetAllPoints()
 questIcon:SetTexture("Interface\\GossipFrame\\AvailableQuestIcon")
 
--- Botão de Limpar (x)
+-- Botão de Limpar / Fechar Edição (x)
 local clearBtn = CreateFrame("Button", nil, inputContainer)
 clearBtn:SetSize(16, 16)
 clearBtn:SetPoint("TOPRIGHT", inputContainer, "TOPRIGHT", -6, -6)
@@ -207,12 +279,16 @@ else
 end
 clearIcon:SetAlpha(0.6)
 
-clearBtn:SetScript("OnEnter", function()
+clearBtn:SetScript("OnEnter", function(self)
     clearIcon:SetAlpha(1.0)
+    GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+    GameTooltip:SetText(L["CANCEL"])
+    GameTooltip:Show()
 end)
 
 clearBtn:SetScript("OnLeave", function()
     clearIcon:SetAlpha(0.6)
+    GameTooltip:Hide()
 end)
 
 -- EditBox multiline
@@ -225,9 +301,14 @@ editBox:SetPoint("TOPLEFT", inputContainer, "TOPLEFT", 25, -5)
 editBox:SetPoint("BOTTOMRIGHT", inputContainer, "BOTTOMRIGHT", -24, 5)
 
 clearBtn:SetScript("OnClick", function()
-    editBox:SetText("")
-    editBox:SetFocus()
-    UpdateInputLayout()
+    GameTooltip:Hide()
+    if editingGoal then
+        CancelarEdicao()
+    else
+        editBox:SetText("")
+        editBox:ClearFocus()
+        UpdateInputLayout()
+    end
 end)
 
 -- Placeholder quando vazio (brilhante e de alta legibilidade)
@@ -256,32 +337,12 @@ inputContainer:SetScript("OnMouseDown", function()
     editBox:SetFocus()
 end)
 
--- 3. Botão de Adicionar e Botão de Cancelar
+-- 3. Botão de Adicionar / Salvar
 local btnAdicionar = CreateFrame("Button", nil, frame, "UIPanelButtonTemplate")
 btnAdicionar:SetSize(72, 26)
 btnAdicionar:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -20, -39)
 btnAdicionar:SetText(L["ADD"])
 btnAdicionar:Hide()
-
-local btnCancelar = CreateFrame("Button", nil, frame, "UIPanelButtonTemplate")
-btnCancelar:SetSize(22, 26)
-btnCancelar:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -20, -39)
-btnCancelar:SetText("X")
-btnCancelar:Hide()
-
-btnCancelar:SetScript("OnEnter", function(self)
-    GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-    GameTooltip:SetText(L["CANCEL"])
-    GameTooltip:Show()
-end)
-
-btnCancelar:SetScript("OnLeave", function()
-    GameTooltip:Hide()
-end)
-
-btnCancelar:SetScript("OnClick", function()
-    CancelarEdicao()
-end)
 
 UpdateInputHeight = function()
     local text = editBox:GetText() or ""
@@ -320,34 +381,20 @@ UpdateInputLayout = function()
     local isCompact = hasFocus or hasText or isEditing
 
     if isCompact then
+        btnAdicionar:SetSize(72, 26)
+        btnAdicionar:ClearAllPoints()
+        btnAdicionar:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -20, -39)
         if isEditing then
-            btnCancelar:SetSize(22, 26)
-            btnCancelar:ClearAllPoints()
-            btnCancelar:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -20, -39)
-            btnCancelar:Show()
-
-            btnAdicionar:SetSize(56, 26)
-            btnAdicionar:ClearAllPoints()
-            btnAdicionar:SetPoint("RIGHT", btnCancelar, "LEFT", -4, 0)
             btnAdicionar:SetText(L["SAVE"])
-            btnAdicionar:Show()
-
-            inputContainer:SetWidth(252)
         else
-            btnCancelar:Hide()
-
-            btnAdicionar:SetSize(72, 26)
-            btnAdicionar:ClearAllPoints()
-            btnAdicionar:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -20, -39)
             btnAdicionar:SetText(L["ADD"])
-            btnAdicionar:Show()
-
-            inputContainer:SetWidth(262)
         end
+        btnAdicionar:Show()
+
+        inputContainer:SetWidth(262)
         clearBtn:Show()
     else
         btnAdicionar:Hide()
-        btnCancelar:Hide()
         inputContainer:SetWidth(340)
         clearBtn:Hide()
     end
@@ -358,14 +405,12 @@ UpdateInputLayout = function()
         placeholder:Hide()
     end
 
-    if hasFocus then
-        focusLeft:Show()
-        focusRight:Show()
-        focusMid:Show()
-    else
-        focusLeft:Hide()
-        focusRight:Hide()
-        focusMid:Hide()
+    for _, tex in ipairs(focusTextures) do
+        if hasFocus then
+            tex:Show()
+        else
+            tex:Hide()
+        end
     end
 
     UpdateInputHeight()
@@ -393,6 +438,7 @@ editBox:SetScript("OnEscapePressed", function(self)
     if editingGoal then
         CancelarEdicao()
     else
+        self:SetText("")
         self:ClearFocus()
         UpdateInputLayout()
     end
@@ -458,6 +504,19 @@ end
 
 -- Inicializa o layout do input no estado padrão (largura total, sem botões)
 UpdateInputLayout()
+
+-- Reseta estado de edição ou inserção quando o frame for fechado
+frame:SetScript("OnHide", function()
+    if editingGoal then
+        CancelarEdicao()
+    else
+        if editBox:GetText() ~= "" then
+            editBox:SetText("")
+        end
+        editBox:ClearFocus()
+        UpdateInputLayout()
+    end
+end)
 
 -- 4. Checkbox para Filtrar por Personagem
 local chkFilter = CreateFrame("CheckButton", "MyJourneyFilterCheck", frame, "ChatConfigCheckButtonTemplate")
@@ -781,6 +840,9 @@ exportFrame:SetPoint("CENTER", UIParent, "CENTER")
 exportFrame:SetFrameStrata("FULLSCREEN_DIALOG")
 exportFrame.TitleText:SetText(L["EXPORT_IMPORT"])
 exportFrame:Hide()
+
+-- Garante que o frame de exportação/importação feche no ESC antes da janela principal
+table.insert(UISpecialFrames, 1, "MyJourneyExportFrame")
 
 local exportDesc = exportFrame:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
 exportDesc:SetPoint("TOP", exportFrame, "TOP", 0, -30)
