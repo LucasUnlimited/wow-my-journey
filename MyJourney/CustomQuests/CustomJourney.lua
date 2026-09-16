@@ -31,6 +31,7 @@ local L = {
     ["UNKNOWN"] = "Unknown",
     ["COLLAPSE"] = "Click to collapse",
     ["EXPAND"] = "Click to expand",
+    ["PLACEHOLDER_GOAL"] = "Write your Goal and add to the list",
 }
 
 if clientLocale == "ptBR" then
@@ -54,6 +55,7 @@ if clientLocale == "ptBR" then
     L["UNKNOWN"] = "Desconhecido"
     L["COLLAPSE"] = "Clique para recolher"
     L["EXPAND"] = "Clique para expandir"
+    L["PLACEHOLDER_GOAL"] = "Escreva seu objetivo e adicione à lista"
 end
 
 setmetatable(L, {
@@ -124,23 +126,189 @@ local AtualizarLista
 local CancelarEdicao
 local IniciarEdicao
 local SalvarOuAdicionar
+local UpdateInputLayout
+local UpdateInputHeight
 local editingGoal = nil
 
--- 2. Criar o Campo de Entrada (EditBox)
-local editBox = CreateFrame("EditBox", nil, frame, "InputBoxTemplate")
-editBox:SetSize(240, 30)
-editBox:SetPoint("TOPLEFT", frame, "TOPLEFT", 20, -40)
-editBox:SetAutoFocus(false)
+-- 2. Criar o Campo de Entrada (Container, Ícone +, EditBox e Placeholder)
+local inputContainer = CreateFrame("Frame", nil, frame, BackdropTemplateMixin and "BackdropTemplate" or nil)
+inputContainer:SetPoint("TOPLEFT", frame, "TOPLEFT", 20, -38)
+inputContainer:SetSize(335, 28)
 
--- MAGIA DOS LINKS: Permitir Shift+Clique para inserir itens/conquistas (Versão Moderna)
-editBox:SetScript("OnMouseDown", function(self)
-    self:SetFocus()
+inputContainer:SetBackdrop({
+    bgFile = "Interface\\Buttons\\WHITE8X8",
+    edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
+    tile = false,
+    tileSize = 16,
+    edgeSize = 12,
+    insets = { left = 3, right = 3, top = 3, bottom = 3 },
+})
+inputContainer:SetBackdropColor(0.06, 0.06, 0.06, 0.75)
+inputContainer:SetBackdropBorderColor(0.4, 0.4, 0.4, 0.7)
+
+-- Botão/Ícone + na esquerda
+local plusBtn = CreateFrame("Button", nil, inputContainer)
+plusBtn:SetSize(14, 14)
+plusBtn:SetPoint("TOPLEFT", inputContainer, "TOPLEFT", 7, -7)
+
+local plusIcon = plusBtn:CreateTexture(nil, "ARTWORK")
+plusIcon:SetAllPoints()
+plusIcon:SetTexture("Interface\\Buttons\\UI-PlusButton-Up")
+
+plusBtn:SetHighlightTexture("Interface\\Buttons\\UI-PlusButton-Hilight", "ADD")
+
+-- EditBox multiline
+local editBox = CreateFrame("EditBox", nil, inputContainer)
+editBox:SetMultiLine(true)
+editBox:SetFontObject("ChatFontNormal")
+editBox:SetTextColor(1, 1, 1, 1)
+editBox:SetAutoFocus(false)
+editBox:SetPoint("TOPLEFT", inputContainer, "TOPLEFT", 26, -6)
+editBox:SetPoint("BOTTOMRIGHT", inputContainer, "BOTTOMRIGHT", -6, 6)
+
+-- Placeholder quando vazio
+local placeholder = inputContainer:CreateFontString(nil, "OVERLAY", "ChatFontNormal")
+placeholder:SetPoint("TOPLEFT", editBox, "TOPLEFT", 0, 0)
+placeholder:SetPoint("BOTTOMRIGHT", editBox, "BOTTOMRIGHT", 0, 0)
+placeholder:SetJustifyH("LEFT")
+placeholder:SetJustifyV("TOP")
+placeholder:SetTextColor(0.55, 0.55, 0.55, 0.85)
+placeholder:SetWordWrap(false)
+placeholder:SetText(L["PLACEHOLDER_GOAL"])
+
+-- FontString auxiliar para medir a altura do texto com wrap
+local measureText = frame:CreateFontString(nil, "BACKGROUND", "ChatFontNormal")
+measureText:Hide()
+measureText:SetWordWrap(true)
+measureText:SetNonSpaceWrap(true)
+
+-- Clicar em qualquer parte do container ou no botão + foca o editbox
+plusBtn:SetScript("OnClick", function()
+    editBox:SetFocus()
 end)
 
-editBox:SetScript("OnEnterPressed", function(self)
-    if SalvarOuAdicionar then
-        SalvarOuAdicionar()
+inputContainer:EnableMouse(true)
+inputContainer:SetScript("OnMouseDown", function()
+    editBox:SetFocus()
+end)
+
+-- 3. Botão de Adicionar e Botão de Cancelar
+local btnAdicionar = CreateFrame("Button", nil, frame, "UIPanelButtonTemplate")
+btnAdicionar:SetSize(72, 26)
+btnAdicionar:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -25, -38)
+btnAdicionar:SetText(L["ADD"])
+btnAdicionar:Hide()
+
+local btnCancelar = CreateFrame("Button", nil, frame, "UIPanelButtonTemplate")
+btnCancelar:SetSize(22, 26)
+btnCancelar:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -25, -38)
+btnCancelar:SetText("X")
+btnCancelar:Hide()
+
+btnCancelar:SetScript("OnEnter", function(self)
+    GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+    GameTooltip:SetText(L["CANCEL"])
+    GameTooltip:Show()
+end)
+
+btnCancelar:SetScript("OnLeave", function()
+    GameTooltip:Hide()
+end)
+
+btnCancelar:SetScript("OnClick", function()
+    CancelarEdicao()
+end)
+
+UpdateInputHeight = function()
+    local text = editBox:GetText()
+    local editWidth = editBox:GetWidth()
+    if not editWidth or editWidth <= 0 then
+        local isCompact = btnAdicionar:IsShown()
+        editWidth = (isCompact and 250 or 335) - 32
     end
+
+    measureText:SetWidth(editWidth)
+    if text and text ~= "" then
+        measureText:SetText(text)
+    else
+        measureText:SetText("A")
+    end
+
+    local textHeight = measureText:GetStringHeight()
+    local targetHeight = math.max(28, math.min(100, math.ceil(textHeight + 14)))
+    inputContainer:SetHeight(targetHeight)
+end
+
+UpdateInputLayout = function()
+    local hasFocus = editBox:HasFocus()
+    local text = editBox:GetText() or ""
+    local hasText = (text ~= "")
+    local isEditing = (editingGoal ~= nil)
+
+    local isCompact = hasFocus or hasText or isEditing
+
+    if isCompact then
+        if isEditing then
+            btnCancelar:SetSize(22, 26)
+            btnCancelar:ClearAllPoints()
+            btnCancelar:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -25, -38)
+            btnCancelar:Show()
+
+            btnAdicionar:SetSize(54, 26)
+            btnAdicionar:ClearAllPoints()
+            btnAdicionar:SetPoint("RIGHT", btnCancelar, "LEFT", -4, 0)
+            btnAdicionar:SetText(L["SAVE"])
+            btnAdicionar:Show()
+
+            inputContainer:SetWidth(248)
+        else
+            btnCancelar:Hide()
+
+            btnAdicionar:SetSize(72, 26)
+            btnAdicionar:ClearAllPoints()
+            btnAdicionar:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -25, -38)
+            btnAdicionar:SetText(L["ADD"])
+            btnAdicionar:Show()
+
+            inputContainer:SetWidth(252)
+        end
+    else
+        btnAdicionar:Hide()
+        btnCancelar:Hide()
+        inputContainer:SetWidth(335)
+    end
+
+    if text == "" then
+        placeholder:Show()
+    else
+        placeholder:Hide()
+    end
+
+    if hasFocus then
+        inputContainer:SetBackdropBorderColor(0.75, 0.75, 0.75, 0.95)
+    else
+        inputContainer:SetBackdropBorderColor(0.4, 0.4, 0.4, 0.7)
+    end
+
+    UpdateInputHeight()
+end
+
+editBox:SetScript("OnEditFocusGained", function(self)
+    UpdateInputLayout()
+end)
+
+editBox:SetScript("OnEditFocusLost", function(self)
+    C_Timer.After(0.05, function()
+        UpdateInputLayout()
+    end)
+end)
+
+editBox:SetScript("OnTextChanged", function(self, userInput)
+    if not self:HasFocus() and self:GetText() == "\n" then
+        self:SetText("")
+        return
+    end
+    UpdateInputLayout()
 end)
 
 editBox:SetScript("OnEscapePressed", function(self)
@@ -148,6 +316,19 @@ editBox:SetScript("OnEscapePressed", function(self)
         CancelarEdicao()
     else
         self:ClearFocus()
+        UpdateInputLayout()
+    end
+end)
+
+editBox:SetScript("OnKeyDown", function(self, key)
+    if key == "ENTER" then
+        if IsShiftKeyDown() then
+            self:Insert("\n")
+        else
+            if SalvarOuAdicionar then
+                SalvarOuAdicionar()
+            end
+        end
     end
 end)
 
@@ -177,39 +358,11 @@ hooksecurefunc("ChatEdit_InsertLink", InserirLinkNoEditBox)
 -- Intercepta links vindos diretamente do clique (Shift+Click) em itens da bolsa/personagem
 hooksecurefunc("HandleModifiedItemClick", InserirLinkNoEditBox)
 
--- 3. Botão de Adicionar e Botão de Cancelar
-local btnAdicionar = CreateFrame("Button", nil, frame, "UIPanelButtonTemplate")
-btnAdicionar:SetSize(80, 25)
-btnAdicionar:SetPoint("LEFT", editBox, "RIGHT", 10, 0)
-btnAdicionar:SetText(L["ADD"])
-
-local btnCancelar = CreateFrame("Button", nil, frame, "UIPanelButtonTemplate")
-btnCancelar:SetSize(22, 25)
-btnCancelar:SetPoint("LEFT", btnAdicionar, "RIGHT", 4, 0)
-btnCancelar:SetText("X")
-btnCancelar:Hide()
-
-btnCancelar:SetScript("OnEnter", function(self)
-    GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-    GameTooltip:SetText(L["CANCEL"])
-    GameTooltip:Show()
-end)
-
-btnCancelar:SetScript("OnLeave", function()
-    GameTooltip:Hide()
-end)
-
 CancelarEdicao = function()
     editingGoal = nil
     editBox:SetText("")
     editBox:ClearFocus()
-    btnAdicionar:SetText(L["ADD"])
-    btnAdicionar:SetWidth(80)
-    btnAdicionar:ClearAllPoints()
-    btnAdicionar:SetPoint("LEFT", editBox, "RIGHT", 10, 0)
-    if btnCancelar then
-        btnCancelar:Hide()
-    end
+    UpdateInputLayout()
     if AtualizarLista then
         AtualizarLista()
     end
@@ -219,21 +372,14 @@ IniciarEdicao = function(author, objetivoData)
     editingGoal = { author = author, item = objetivoData }
     editBox:SetText(objetivoData.text)
     editBox:SetFocus()
-    btnAdicionar:SetText(L["SAVE"])
-    btnAdicionar:SetWidth(58)
-    btnAdicionar:ClearAllPoints()
-    btnAdicionar:SetPoint("LEFT", editBox, "RIGHT", 6, 0)
-    if btnCancelar then
-        btnCancelar:Show()
-    end
+    UpdateInputLayout()
     if AtualizarLista then
         AtualizarLista()
     end
 end
 
-btnCancelar:SetScript("OnClick", function()
-    CancelarEdicao()
-end)
+-- Inicializa o layout do input no estado padrão (largura total, sem botões)
+UpdateInputLayout()
 
 -- 4. Checkbox para Filtrar por Personagem
 local chkFilter = CreateFrame("CheckButton", "MyJourneyFilterCheck", frame, "ChatConfigCheckButtonTemplate")
@@ -243,7 +389,7 @@ chkFilter:SetChecked(true)
 
 -- 5. Container para a Lista de Objetivos
 local scrollFrame = CreateFrame("ScrollFrame", nil, frame, "UIPanelScrollFrameTemplate")
-scrollFrame:SetPoint("TOPLEFT", editBox, "BOTTOMLEFT", 0, -20)
+scrollFrame:SetPoint("TOPLEFT", inputContainer, "BOTTOMLEFT", 0, -15)
 scrollFrame:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -30, 40)
 
 local content = CreateFrame("Frame", nil, scrollFrame)
@@ -388,16 +534,7 @@ AtualizarLista = function()
                     btnRemover:SetScript("OnClick", function()
                         GameTooltip:Hide()
                         if editingGoal and editingGoal.item == objetivoData then
-                            editingGoal = nil
-                            editBox:SetText("")
-                            editBox:ClearFocus()
-                            btnAdicionar:SetText(L["ADD"])
-                            btnAdicionar:SetWidth(80)
-                            btnAdicionar:ClearAllPoints()
-                            btnAdicionar:SetPoint("LEFT", editBox, "RIGHT", 10, 0)
-                            if btnCancelar then
-                                btnCancelar:Hide()
-                            end
+                            CancelarEdicao()
                         end
                         table.remove(MyJourneyTrack[author], index)
                         AtualizarLista()
@@ -514,6 +651,9 @@ end)
 -- Lógica do Botão Adicionar / Salvar
 SalvarOuAdicionar = function()
     local texto = editBox:GetText()
+    if texto then
+        texto = string.gsub(texto, "^%s*(.-)%s*$", "%1")
+    end
     if texto and texto ~= "" then
         if editingGoal and editingGoal.item then
             local authorList = MyJourneyTrack[editingGoal.author]
@@ -541,6 +681,7 @@ SalvarOuAdicionar = function()
             if MyJourneySettings.collapsed then
                 MyJourneySettings.collapsed[currentPlayer] = false
             end
+            UpdateInputLayout()
             AtualizarLista()
         end
     end
@@ -760,6 +901,7 @@ frame:SetScript("OnEvent", function(self, event, addonName)
         
         MigrateData()
         RegistrarOpcoes()
+        UpdateInputLayout()
         AtualizarLista()
     end
 end)
