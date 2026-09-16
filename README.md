@@ -8,7 +8,11 @@
 
 Developed entirely on the **pure Blizzard API (native Lua)**, the addon was designed to be extremely lightweight, stable, and free of dependencies on third-party frameworks (such as Ace3).
 
-<img width="378" height="480" alt="myjourney_frame_en" src="https://github.com/user-attachments/assets/a3f8193d-7b78-4586-b97d-613d9af1d388" />
+<img width="378" height="480" alt="01_myjourney_frame_nofilter_en" src="IMAGES/01_myjourney_frame_nofilter_en.jpg.png" />
+<img width="378" height="480" alt="02_myjourney_frame_filter_en" src="IMAGES/02_myjourney_frame_filter_en.jpg.png" />
+<img width="378" height="480" alt="03_myjourney_frame_addgoal_en" src="IMAGES/03_myjourney_frame_addgoal_en.jpg.png" />
+<img width="378" height="480" alt="04_myjourney_frame_editgoal_en" src="IMAGES/04_myjourney_frame_editgoal_en.jpg.png" />
+<img width="320" height="420" alt="05_myjourney_frame_backup_en" src="IMAGES/05_myjourney_frame_backup_en.jpg.png" />
 
 ---
 
@@ -37,7 +41,7 @@ During development, the addon's architecture overcame specific challenges of Bli
 ## 🚀 How to Install
 
 1. Download the repository as a `.ZIP` file (or clone the repository).
-2. Extract the folder and make sure the main directory is named exactly `MyJourney`.
+2. Extract the folder and make sure the directory has the folder named exactly `MyJourney` .
 3. Move the `MyJourney` folder to your game's add-ons directory: World of Warcraft\_retail_\Interface\AddOns\
 4. Launch World of Warcraft and make sure the add-on is enabled in the Add-ons list.
 
