@@ -130,31 +130,99 @@ local UpdateInputLayout
 local UpdateInputHeight
 local editingGoal = nil
 
--- 2. Criar o Campo de Entrada (Container, Ícone !, EditBox e Placeholder)
-local inputContainer = CreateFrame("Frame", nil, frame, BackdropTemplateMixin and "BackdropTemplate" or nil)
+-- 2. Criar o Campo de Entrada (Container estilo SearchBox nativo da Blizzard)
+local inputContainer = CreateFrame("Frame", nil, frame)
 inputContainer:SetPoint("TOPLEFT", frame, "TOPLEFT", 20, -38)
-inputContainer:SetSize(335, 28)
+inputContainer:SetSize(335, 24)
 inputContainer:SetClipsChildren(true)
 
-inputContainer:SetBackdrop({
-    bgFile = "Interface\\Buttons\\WHITE8X8",
-    edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
-    tile = false,
-    tileSize = 16,
-    edgeSize = 12,
-    insets = { left = 3, right = 3, top = 3, bottom = 3 },
-})
-inputContainer:SetBackdropColor(0.06, 0.06, 0.06, 0.75)
-inputContainer:SetBackdropBorderColor(0.4, 0.4, 0.4, 0.7)
+-- Fundo escuro do SearchBox
+local inputBg = inputContainer:CreateTexture(nil, "BACKGROUND", nil, -8)
+inputBg:SetPoint("TOPLEFT", inputContainer, "TOPLEFT", 1, -1)
+inputBg:SetPoint("BOTTOMRIGHT", inputContainer, "BOTTOMRIGHT", -1, 1)
+inputBg:SetColorTexture(0.04, 0.04, 0.04, 0.92)
 
--- Ícone de Missão (!) na esquerda
+-- Borda estilo SearchBox nativa da Blizzard (9-slice do Common-Input-Border)
+local borderTL = inputContainer:CreateTexture(nil, "BACKGROUND", nil, -5)
+borderTL:SetSize(8, 8)
+borderTL:SetPoint("TOPLEFT", inputContainer, "TOPLEFT", -3, 3)
+borderTL:SetTexture("Interface\\Common\\Common-Input-Border-TL")
+
+local borderTR = inputContainer:CreateTexture(nil, "BACKGROUND", nil, -5)
+borderTR:SetSize(8, 8)
+borderTR:SetPoint("TOPRIGHT", inputContainer, "TOPRIGHT", 3, 3)
+borderTR:SetTexture("Interface\\Common\\Common-Input-Border-TR")
+
+local borderBL = inputContainer:CreateTexture(nil, "BACKGROUND", nil, -5)
+borderBL:SetSize(8, 8)
+borderBL:SetPoint("BOTTOMLEFT", inputContainer, "BOTTOMLEFT", -3, -3)
+borderBL:SetTexture("Interface\\Common\\Common-Input-Border-BL")
+
+local borderBR = inputContainer:CreateTexture(nil, "BACKGROUND", nil, -5)
+borderBR:SetSize(8, 8)
+borderBR:SetPoint("BOTTOMRIGHT", inputContainer, "BOTTOMRIGHT", 3, -3)
+borderBR:SetTexture("Interface\\Common\\Common-Input-Border-BR")
+
+local borderT = inputContainer:CreateTexture(nil, "BACKGROUND", nil, -5)
+borderT:SetPoint("TOPLEFT", borderTL, "TOPRIGHT")
+borderT:SetPoint("BOTTOMRIGHT", borderTR, "BOTTOMLEFT")
+borderT:SetTexture("Interface\\Common\\Common-Input-Border-T")
+
+local borderB = inputContainer:CreateTexture(nil, "BACKGROUND", nil, -5)
+borderB:SetPoint("TOPLEFT", borderBL, "TOPRIGHT")
+borderB:SetPoint("BOTTOMRIGHT", borderBR, "BOTTOMLEFT")
+borderB:SetTexture("Interface\\Common\\Common-Input-Border-B")
+
+local borderL = inputContainer:CreateTexture(nil, "BACKGROUND", nil, -5)
+borderL:SetPoint("TOPLEFT", borderTL, "BOTTOMLEFT")
+borderL:SetPoint("BOTTOMRIGHT", borderBL, "TOPRIGHT")
+borderL:SetTexture("Interface\\Common\\Common-Input-Border-L")
+
+local borderR = inputContainer:CreateTexture(nil, "BACKGROUND", nil, -5)
+borderR:SetPoint("TOPLEFT", borderTR, "BOTTOMLEFT")
+borderR:SetPoint("BOTTOMRIGHT", borderBR, "TOPRIGHT")
+borderR:SetTexture("Interface\\Common\\Common-Input-Border-R")
+
+local borderTextures = { borderTL, borderTR, borderBL, borderBR, borderT, borderB, borderL, borderR }
+local function SetBorderColor(r, g, b, a)
+    for _, tex in ipairs(borderTextures) do
+        tex:SetVertexColor(r, g, b, a)
+    end
+end
+SetBorderColor(0.7, 0.7, 0.7, 0.85)
+
+-- Ícone de Missão (!) na esquerda (substitui a lupa de busca)
 local questBtn = CreateFrame("Button", nil, inputContainer)
-questBtn:SetSize(16, 16)
-questBtn:SetPoint("TOPLEFT", inputContainer, "TOPLEFT", 6, -6)
+questBtn:SetSize(14, 14)
+questBtn:SetPoint("TOPLEFT", inputContainer, "TOPLEFT", 5, -5)
 
 local questIcon = questBtn:CreateTexture(nil, "ARTWORK")
 questIcon:SetAllPoints()
 questIcon:SetTexture("Interface\\GossipFrame\\AvailableQuestIcon")
+
+-- Botão de Limpar (x) no estilo SearchBox nativo
+local clearBtn = CreateFrame("Button", nil, inputContainer)
+clearBtn:SetSize(16, 16)
+clearBtn:SetPoint("TOPRIGHT", inputContainer, "TOPRIGHT", -3, -4)
+clearBtn:Hide()
+
+local clearIcon = clearBtn:CreateTexture(nil, "ARTWORK")
+clearIcon:SetSize(11, 11)
+clearIcon:SetPoint("CENTER")
+if clearIcon.SetAtlas and C_Texture and C_Texture.GetAtlasInfo and C_Texture.GetAtlasInfo("common-search-clearbutton") then
+    clearIcon:SetAtlas("common-search-clearbutton")
+else
+    clearIcon:SetTexture("Interface\\FriendsFrame\\ClearBroadcastIcon")
+end
+clearIcon:SetAlpha(0.55)
+
+clearBtn:SetScript("OnEnter", function()
+    clearIcon:SetAlpha(1.0)
+end)
+
+clearBtn:SetScript("OnLeave", function()
+    clearIcon:SetAlpha(0.55)
+end)
 
 -- EditBox multiline
 local editBox = CreateFrame("EditBox", nil, inputContainer)
@@ -162,8 +230,14 @@ editBox:SetMultiLine(true)
 editBox:SetFontObject("ChatFontNormal")
 editBox:SetTextColor(1, 1, 1, 1)
 editBox:SetAutoFocus(false)
-editBox:SetPoint("TOPLEFT", inputContainer, "TOPLEFT", 26, -6)
-editBox:SetPoint("BOTTOMRIGHT", inputContainer, "BOTTOMRIGHT", -6, 6)
+editBox:SetPoint("TOPLEFT", inputContainer, "TOPLEFT", 23, -4)
+editBox:SetPoint("BOTTOMRIGHT", inputContainer, "BOTTOMRIGHT", -20, 4)
+
+clearBtn:SetScript("OnClick", function()
+    editBox:SetText("")
+    editBox:SetFocus()
+    UpdateInputLayout()
+end)
 
 -- Placeholder quando vazio
 local placeholder = inputContainer:CreateFontString(nil, "OVERLAY", "ChatFontNormal")
@@ -171,7 +245,7 @@ placeholder:SetPoint("TOPLEFT", editBox, "TOPLEFT", 0, 0)
 placeholder:SetPoint("BOTTOMRIGHT", editBox, "BOTTOMRIGHT", 0, 0)
 placeholder:SetJustifyH("LEFT")
 placeholder:SetJustifyV("TOP")
-placeholder:SetTextColor(0.55, 0.55, 0.55, 0.85)
+placeholder:SetTextColor(0.42, 0.42, 0.42, 0.85)
 placeholder:SetWordWrap(false)
 placeholder:SetText(L["PLACEHOLDER_GOAL"])
 
@@ -193,13 +267,13 @@ end)
 
 -- 3. Botão de Adicionar e Botão de Cancelar
 local btnAdicionar = CreateFrame("Button", nil, frame, "UIPanelButtonTemplate")
-btnAdicionar:SetSize(72, 26)
+btnAdicionar:SetSize(72, 24)
 btnAdicionar:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -25, -38)
 btnAdicionar:SetText(L["ADD"])
 btnAdicionar:Hide()
 
 local btnCancelar = CreateFrame("Button", nil, frame, "UIPanelButtonTemplate")
-btnCancelar:SetSize(22, 26)
+btnCancelar:SetSize(22, 24)
 btnCancelar:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -25, -38)
 btnCancelar:SetText("X")
 btnCancelar:Hide()
@@ -223,7 +297,7 @@ UpdateInputHeight = function()
     local editWidth = editBox:GetWidth()
     if not editWidth or editWidth <= 0 then
         local isCompact = btnAdicionar:IsShown()
-        editWidth = (isCompact and 250 or 335) - 32
+        editWidth = (isCompact and 250 or 335) - 43
     end
 
     measureText:SetWidth(editWidth)
@@ -241,9 +315,9 @@ UpdateInputHeight = function()
     local stringHeight = measureText:GetStringHeight()
     local minLinesHeight = (newlineCount + 1) * 15
     local textHeight = math.max(stringHeight, minLinesHeight)
-    local targetHeight = math.max(28, math.min(120, math.ceil(textHeight + 14)))
+    local targetHeight = math.max(24, math.min(120, math.ceil(textHeight + 9)))
     inputContainer:SetHeight(targetHeight)
-    editBox:SetHeight(targetHeight - 12)
+    editBox:SetHeight(targetHeight - 8)
 end
 
 UpdateInputLayout = function()
@@ -256,12 +330,12 @@ UpdateInputLayout = function()
 
     if isCompact then
         if isEditing then
-            btnCancelar:SetSize(22, 26)
+            btnCancelar:SetSize(22, 24)
             btnCancelar:ClearAllPoints()
             btnCancelar:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -25, -38)
             btnCancelar:Show()
 
-            btnAdicionar:SetSize(54, 26)
+            btnAdicionar:SetSize(54, 24)
             btnAdicionar:ClearAllPoints()
             btnAdicionar:SetPoint("RIGHT", btnCancelar, "LEFT", -4, 0)
             btnAdicionar:SetText(L["SAVE"])
@@ -271,7 +345,7 @@ UpdateInputLayout = function()
         else
             btnCancelar:Hide()
 
-            btnAdicionar:SetSize(72, 26)
+            btnAdicionar:SetSize(72, 24)
             btnAdicionar:ClearAllPoints()
             btnAdicionar:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -25, -38)
             btnAdicionar:SetText(L["ADD"])
@@ -287,14 +361,16 @@ UpdateInputLayout = function()
 
     if text == "" then
         placeholder:Show()
+        clearBtn:Hide()
     else
         placeholder:Hide()
+        clearBtn:Show()
     end
 
     if hasFocus then
-        inputContainer:SetBackdropBorderColor(0.75, 0.75, 0.75, 0.95)
+        SetBorderColor(1, 1, 1, 1)
     else
-        inputContainer:SetBackdropBorderColor(0.4, 0.4, 0.4, 0.7)
+        SetBorderColor(0.7, 0.7, 0.7, 0.85)
     end
 
     UpdateInputHeight()
